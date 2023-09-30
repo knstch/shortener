@@ -10,6 +10,7 @@ import (
 var storage = make(map[string]string)
 var counter int
 
+// Test
 func getMethod(res http.ResponseWriter, req *http.Request) {
 	for k, v := range storage {
 		if "/"+v == req.URL.String() {
