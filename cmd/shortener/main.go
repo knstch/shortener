@@ -19,6 +19,7 @@ func getMethod(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+	http.Error(res, "Bad Request", http.StatusBadRequest)
 }
 
 func postMethod(res http.ResponseWriter, req *http.Request) {
