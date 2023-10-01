@@ -42,6 +42,7 @@ func TestPostMethod(t *testing.T) {
 			assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
 			decryptedBody, err := io.ReadAll(result.Body)
 			require.NoError(t, err)
+			err = result.Body.Close()
 			assert.Equal(t, tt.want.body, string(decryptedBody))
 		})
 	}
@@ -77,6 +78,7 @@ func TestGetMethod(t *testing.T) {
 			fmt.Println(result.Header, result.StatusCode)
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
 			assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
+			result.Body.Close()
 		})
 	}
 }
