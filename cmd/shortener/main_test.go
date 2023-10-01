@@ -43,6 +43,7 @@ func TestPostMethod(t *testing.T) {
 			decryptedBody, err := io.ReadAll(result.Body)
 			require.NoError(t, err)
 			err = result.Body.Close()
+			require.NoError(t, err)
 			assert.Equal(t, tt.want.body, string(decryptedBody))
 		})
 	}
