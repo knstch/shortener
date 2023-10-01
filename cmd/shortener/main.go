@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -10,14 +9,12 @@ import (
 var storage = make(map[string]string)
 var counter int
 
-// Test
 func getMethod(res http.ResponseWriter, req *http.Request) {
 	for k, v := range storage {
 		if "/"+v == req.URL.String() {
 			res.Header().Set("Content-Type", "text/plain")
 			res.Header().Add("Location", k)
 			res.WriteHeader(307)
-			fmt.Println(res.Header())
 			res.Write([]byte(k))
 			return
 		}
