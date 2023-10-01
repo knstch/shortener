@@ -69,6 +69,15 @@ func TestGetMethod(t *testing.T) {
 			},
 			request: "/shortenLink1",
 		},
+		{
+			name: "Bad request test",
+			want: Want{
+				statusCode:  400,
+				contentType: "text/plain; charset=utf-8",
+				location:    "",
+			},
+			request: "/asdwasd",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
