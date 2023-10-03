@@ -3,13 +3,13 @@ package getmethod
 import (
 	"testing"
 
-	. "github.com/knstch/shortener_url/internal/app/postMethod"
+	postMethod "github.com/knstch/shortener_url/internal/app/postMethod"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetMethod(t *testing.T) {
 
-	var testStorage = Storage{
+	var testStorage = postMethod.Storage{
 		Data: make(map[string]string),
 	}
 	testStorage.Data["https://practicum.yandex.ru/"] = "shortenLink1"
