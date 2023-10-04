@@ -18,6 +18,6 @@ var StorageURLs = Storage{
 func PostMethod(reqBody string, URLstorage *Storage, URLaddr string) string {
 	counter++
 	URLstorage.Data[reqBody] = "shortenLink" + strconv.Itoa(counter)
-	shortenLink := URLaddr + URLstorage.Data[string(reqBody)]
+	shortenLink := URLaddr + "/" + URLstorage.Data[string(reqBody)]
 	return shortenLink
 }
