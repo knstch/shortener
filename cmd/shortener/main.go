@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	config "github.com/knstch/shortener_url/cmd/config"
 	getMethod "github.com/knstch/shortener_url/internal/app/getMethod"
 	postMethod "github.com/knstch/shortener_url/internal/app/postMethod"
 )
@@ -26,7 +27,7 @@ func getURL(res http.ResponseWriter, req *http.Request) {
 
 // Вызывается при использовании метода POST, передает данные
 // в функцию PostMethod для записи данных в хранилище и пишет
-// ответ сервера, когда все записано 
+// ответ сервера, когда все записано
 func postURL(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -34,7 +35,7 @@ func postURL(res http.ResponseWriter, req *http.Request) {
 	}
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(201)
-	res.Write([]byte(postMethod.PostMethod(string(body), &postMethod.StorageURLs)))
+	res.Write([]byte(postMethod.PostMethod(string(body), &postMethod.StorageURLs, config.BasicAddr)))
 }
 
 // Роутер запросов
@@ -46,7 +47,8 @@ func RequestsRouter() chi.Router {
 }
 
 func main() {
-	err := http.ListenAndServe(":8080", RequestsRouter())
+	config.ParseFlags()
+	err := http.ListenAndServe(config.Port, RequestsRouter())
 	if err != nil {
 		panic(err)
 	}

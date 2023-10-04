@@ -28,7 +28,7 @@ func TestPostMethod(t *testing.T) {
 	}
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, PostMethod(tests[i].request, &testStorage), tests[i].want)
+			assert.Equal(t, PostMethod(tests[i].request, &testStorage, "http://localhost:8080/"), tests[i].want)
 		})
 	}
 }
