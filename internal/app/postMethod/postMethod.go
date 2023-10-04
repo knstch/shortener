@@ -15,9 +15,9 @@ var StorageURLs = Storage{
 
 // Принимает запрос в формате string и указатель на хранилище,
 // генерит короткую ссылку и записывает данные в формате ключ-значение
-func PostMethod(reqBody string, URLstorage *Storage) string {
+func PostMethod(reqBody string, URLstorage *Storage, URLaddr string) string {
 	counter++
 	URLstorage.Data[reqBody] = "shortenLink" + strconv.Itoa(counter)
-	shortenLink := "http://localhost:8080/" + URLstorage.Data[string(reqBody)]
+	shortenLink := URLaddr + "/" + URLstorage.Data[string(reqBody)]
 	return shortenLink
 }
