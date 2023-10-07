@@ -47,7 +47,7 @@ func RequestsRouter() chi.Router {
 }
 
 func main() {
-	config.ParseFlags()
+	config.ParseENV()
 	err := http.ListenAndServe(config.Port, RequestsRouter())
 	if err != nil {
 		panic(err)
