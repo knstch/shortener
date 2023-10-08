@@ -35,7 +35,7 @@ func postURL(res http.ResponseWriter, req *http.Request) {
 	}
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(201)
-	res.Write([]byte(postMethod.PostMethod(string(body), &postMethod.StorageURLs, config.BasicAddr)))
+	res.Write([]byte(postMethod.PostMethod(string(body), &postMethod.StorageURLs, config.ReadyConfig.BaseURL)))
 }
 
 // Роутер запросов
@@ -47,8 +47,8 @@ func RequestsRouter() chi.Router {
 }
 
 func main() {
-	config.ParseENV()
-	err := http.ListenAndServe(config.Port, RequestsRouter())
+	config.ParseConfig()
+	err := http.ListenAndServe(config.ReadyConfig.ServerAddr, RequestsRouter())
 	if err != nil {
 		panic(err)
 	}

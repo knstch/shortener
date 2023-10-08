@@ -5,27 +5,24 @@ import (
 	"os"
 )
 
-var BasicAddr string
-var Port string
-
 type Config struct {
-	serverAddr string `env:"SERVER_ADDRESS"`
-	baseURL    string `env:"BASE_URL"`
+	ServerAddr string
+	BaseURL    string
 }
 
+var ReadyConfig Config
+
 // Получаем конфиг из флагов, или глобальных переменных, или значения по-умолчанию
-func ParseENV() {
-	flag.StringVar(&Port, "a", ":8080", "port to run server")
-	flag.StringVar(&BasicAddr, "b", "http://localhost"+Port, "address to run server")
+func ParseConfig() {
+	flag.StringVar(&ReadyConfig.ServerAddr, "a", ":8080", "port to run server")
+	flag.StringVar(&ReadyConfig.BaseURL, "b", "http://localhost"+ReadyConfig.ServerAddr, "address to run server")
+
 	flag.Parse()
 
-	var cfg Config
-	cfg.serverAddr = os.Getenv("SERVER_ADDRESS")
-	cfg.baseURL = os.Getenv("BASE_URL")
-	if cfg.serverAddr != "" {
-		Port = cfg.serverAddr
+	if serverAddr := os.Getenv("SERVER_ADDRESS"); serverAddr != "" {
+		ReadyConfig.ServerAddr = serverAddr
 	}
-	if cfg.baseURL != "" {
-		BasicAddr = cfg.baseURL
+	if baseURL := os.Getenv("BASE_URL"); baseURL != "" {
+		ReadyConfig.BaseURL = baseURL
 	}
 }
