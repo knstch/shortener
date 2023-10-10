@@ -1,4 +1,4 @@
-package postLongLink
+package postlonglink
 
 import (
 	"strconv"
