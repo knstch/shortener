@@ -11,8 +11,8 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	config "github.com/knstch/shortener/cmd/config"
-	getShortenLink "github.com/knstch/shortener/internal/app/GetShortenLink"
 	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
+	getShortenLink "github.com/knstch/shortener/internal/app/getShortenLink"
 	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
 )
 
