@@ -1,4 +1,4 @@
-package getShortenLink
+package getshortenlink
 
 import (
 	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
@@ -14,10 +14,4 @@ func GetShortenLink(url string, URLstorage URLstorage.Storage) string {
 		return ""
 	}
 	return value
-	// value, ok := URLstorage.Data[url]
-	// fmt.Println(value)
-	// if !ok {
-	// 	return ""
-	// }
-	// return value
 }

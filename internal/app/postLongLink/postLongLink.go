@@ -10,9 +10,9 @@ import (
 // генерит короткую ссылку и записывает данные в формате ключ-значение
 func PostLongLink(reqBody string, URLstorage *URLstorage.Storage, URLaddr string) string {
 	URLstorage.Mu.Lock()
+	defer URLstorage.Mu.Unlock()
 	URLstorage.Counter++
 	URLstorage.Data["shortenLink"+strconv.Itoa(URLstorage.Counter)] = reqBody
 	shortenLink := URLaddr + "/" + "shortenLink" + strconv.Itoa(URLstorage.Counter)
-	URLstorage.Mu.Unlock()
 	return shortenLink
 }

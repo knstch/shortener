@@ -1,4 +1,4 @@
-package getShortenLink
+package getshortenlink
 
 import (
 	"testing"
