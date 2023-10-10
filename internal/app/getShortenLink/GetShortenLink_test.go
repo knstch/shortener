@@ -1,6 +1,7 @@
 package getshortenlink
 
 import (
+	"sync"
 	"testing"
 
 	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
@@ -11,6 +12,7 @@ func TestGetShortenLink(t *testing.T) {
 
 	var testStorage = URLstorage.Storage{
 		Data: make(map[string]string),
+		Mu:   &sync.Mutex{},
 	}
 	testStorage.Data["shortenLink1"] = "https://practicum.yandex.ru/"
 
