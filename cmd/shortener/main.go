@@ -6,9 +6,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	config "github.com/knstch/shortener_url/cmd/config"
-	getMethod "github.com/knstch/shortener_url/internal/app/getMethod"
-	postMethod "github.com/knstch/shortener_url/internal/app/postMethod"
+	config "github.com/knstch/shortener/cmd/config"
+	getMethod "github.com/knstch/shortener/internal/app/getMethod"
+	postMethod "github.com/knstch/shortener/internal/app/postMethod"
 )
 
 // Вызываем для передачи данных в функцию GetMethod

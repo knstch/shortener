@@ -3,7 +3,7 @@ package getmethod
 import (
 	"testing"
 
-	postMethod "github.com/knstch/shortener_url/internal/app/postMethod"
+	postMethod "github.com/knstch/shortener/internal/app/postMethod"
 	"github.com/stretchr/testify/assert"
 )
 

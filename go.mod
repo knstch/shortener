@@ -1,4 +1,4 @@
-module github.com/knstch/shortener_url
+module github.com/knstch/shortener
 
 go 1.21.1
 

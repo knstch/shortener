@@ -1,7 +1,7 @@
 package getmethod
 
 import (
-	postMethod "github.com/knstch/shortener_url/internal/app/postMethod"
+	postMethod "github.com/knstch/shortener/internal/app/postMethod"
 )
 
 // Функция принимает URL строку, ищет совпадение в хранилище
