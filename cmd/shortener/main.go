@@ -1,21 +1,26 @@
 package main
 
 import (
+	"context"
 	"io"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
 
 	"github.com/go-chi/chi/v5"
 
 	config "github.com/knstch/shortener/cmd/config"
-	getMethod "github.com/knstch/shortener/internal/app/getMethod"
-	postMethod "github.com/knstch/shortener/internal/app/postMethod"
+	getShortenLink "github.com/knstch/shortener/internal/app/GetShortenLink"
+	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
+	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
 )
 
-// Вызываем для передачи данных в функцию GetMethod
-// и написания ответа в зависимости от ответа GetMethod
+// Вызываем для передачи данных в функцию getURL
+// и написания ответа в зависимости от ответа getURL
 func getURL(res http.ResponseWriter, req *http.Request) {
 	url := chi.URLParam(req, "url")
-	if shortenURL := getMethod.GetMethod(url, postMethod.StorageURLs); shortenURL != "" {
+	if shortenURL := getShortenLink.GetShortenLink(url, URLstorage.StorageURLs); shortenURL != "" {
 		res.Header().Set("Content-Type", "text/plain")
 		res.Header().Set("Location", shortenURL)
 		res.WriteHeader(307)
@@ -26,7 +31,7 @@ func getURL(res http.ResponseWriter, req *http.Request) {
 }
 
 // Вызывается при использовании метода POST, передает данные
-// в функцию PostMethod для записи данных в хранилище и пишет
+// в функцию postURL для записи данных в хранилище и пишет
 // ответ сервера, когда все записано
 func postURL(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
@@ -35,7 +40,7 @@ func postURL(res http.ResponseWriter, req *http.Request) {
 	}
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(201)
-	res.Write([]byte(postMethod.PostMethod(string(body), &postMethod.StorageURLs, config.ReadyConfig.BaseURL)))
+	res.Write([]byte(postLongLink.PostLongLink(string(body), &URLstorage.StorageURLs, config.ReadyConfig.BaseURL)))
 }
 
 // Роутер запросов
@@ -48,8 +53,24 @@ func RequestsRouter() chi.Router {
 
 func main() {
 	config.ParseConfig()
-	err := http.ListenAndServe(config.ReadyConfig.ServerAddr, RequestsRouter())
-	if err != nil {
-		panic(err)
+	srv := http.Server{
+		Addr:    config.ReadyConfig.ServerAddr,
+		Handler: RequestsRouter(),
 	}
+
+	idleConnsClosed := make(chan struct{})
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt)
+		<-sigint
+
+		if err := srv.Shutdown(context.Background()); err != nil {
+			log.Printf("HTTP server shut down: %v", err)
+		}
+		close(idleConnsClosed)
+	}()
+	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		log.Fatalf("HTTP server ListenAndServe: %v", err)
+	}
+	<-idleConnsClosed
 }

@@ -1,12 +1,13 @@
-package postmethod
+package postLongLink
 
 import (
 	"testing"
 
+	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPostMethod(t *testing.T) {
+func TestPostLongLink(t *testing.T) {
 	tests := []struct {
 		name    string
 		want    string
@@ -23,12 +24,12 @@ func TestPostMethod(t *testing.T) {
 			request: "https://practicum.yandex.ru/2",
 		},
 	}
-	var testStorage = Storage{
+	var testStorage = URLstorage.Storage{
 		Data: make(map[string]string),
 	}
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, PostMethod(tests[i].request, &testStorage, "http://localhost:8080"), tests[i].want)
+			assert.Equal(t, PostLongLink(tests[i].request, &testStorage, "http://localhost:8080"), tests[i].want)
 		})
 	}
 }

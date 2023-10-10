@@ -1,18 +1,18 @@
-package getmethod
+package getShortenLink
 
 import (
 	"testing"
 
-	postMethod "github.com/knstch/shortener/internal/app/postMethod"
+	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetMethod(t *testing.T) {
+func TestGetShortenLink(t *testing.T) {
 
-	var testStorage = postMethod.Storage{
+	var testStorage = URLstorage.Storage{
 		Data: make(map[string]string),
 	}
-	testStorage.Data["https://practicum.yandex.ru/"] = "shortenLink1"
+	testStorage.Data["shortenLink1"] = "https://practicum.yandex.ru/"
 
 	tests := []struct {
 		name    string
@@ -32,7 +32,7 @@ func TestGetMethod(t *testing.T) {
 	}
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, GetMethod((tests[i].request), testStorage), tests[i].want)
+			assert.Equal(t, GetShortenLink((tests[i].request), testStorage), tests[i].want)
 		})
 	}
 }
