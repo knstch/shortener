@@ -1,4 +1,4 @@
-package URLstorage
+package urlstorage
 
 import "sync"
 
