@@ -1,57 +1,76 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"io"
+	"log"
 	"net/http"
-	"strconv"
+	"os"
+	"os/signal"
+
+	"github.com/go-chi/chi/v5"
+
+	config "github.com/knstch/shortener/cmd/config"
+	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
+	getShortenLink "github.com/knstch/shortener/internal/app/getShortenLink"
+	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
 )
 
-var storage = make(map[string]string)
-var counter int
-
-func getMethod(res http.ResponseWriter, req *http.Request) {
-	for k, v := range storage {
-		if "/"+v == req.URL.String() {
-			res.Header().Set("Content-Type", "text/plain")
-			res.Header().Add("Location", k)
-			res.WriteHeader(307)
-			fmt.Println(res.Header())
-			res.Write([]byte(k))
-			return
-		}
-	}
-}
-
-func postMethod(res http.ResponseWriter, req *http.Request) {
-	counter++
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		panic(err)
-	}
-	storage[string(body)] = "shortenLink" + strconv.Itoa(counter)
-	shortenLink := "http://localhost:8080/" + storage[string(body)]
-	res.Header().Set("Content-Type", "text/plain")
-	res.WriteHeader(201)
-	res.Write([]byte(shortenLink))
-}
-
-func mainPage(res http.ResponseWriter, req *http.Request) {
-	switch req.Method {
-	case http.MethodGet:
-		getMethod(res, req)
-	case http.MethodPost:
-		postMethod(res, req)
-	default:
+// Вызываем для передачи данных в функцию getURL
+// и написания ответа в зависимости от ответа getURL
+func getURL(res http.ResponseWriter, req *http.Request) {
+	url := chi.URLParam(req, "url")
+	if shortenURL := getShortenLink.GetShortenLink(url, URLstorage.StorageURLs); shortenURL != "" {
+		res.Header().Set("Content-Type", "text/plain")
+		res.Header().Set("Location", shortenURL)
+		res.WriteHeader(307)
+		res.Write([]byte(shortenURL))
+	} else {
 		http.Error(res, "Bad Request", http.StatusBadRequest)
 	}
 }
 
-func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", mainPage)
-	err := http.ListenAndServe(":8080", mux)
+// Вызывается при использовании метода POST, передает данные
+// в функцию postURL для записи данных в хранилище и пишет
+// ответ сервера, когда все записано
+func postURL(res http.ResponseWriter, req *http.Request) {
+	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		panic(err)
 	}
+	res.Header().Set("Content-Type", "text/plain")
+	res.WriteHeader(201)
+	res.Write([]byte(postLongLink.PostLongLink(string(body), &URLstorage.StorageURLs, config.ReadyConfig.BaseURL)))
+}
+
+// Роутер запросов
+func RequestsRouter() chi.Router {
+	r := chi.NewRouter()
+	r.Get("/{url}", getURL)
+	r.Post("/", postURL)
+	return r
+}
+
+func main() {
+	config.ParseConfig()
+	srv := http.Server{
+		Addr:    config.ReadyConfig.ServerAddr,
+		Handler: RequestsRouter(),
+	}
+
+	idleConnsClosed := make(chan struct{})
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt)
+		<-sigint
+
+		if err := srv.Shutdown(context.Background()); err != nil {
+			log.Printf("HTTP server shut down: %v", err)
+		}
+		close(idleConnsClosed)
+	}()
+	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		log.Fatalf("HTTP server ListenAndServe: %v", err)
+	}
+	<-idleConnsClosed
 }
