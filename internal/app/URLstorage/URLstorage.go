@@ -17,6 +17,8 @@ var StorageURLs = Storage{
 }
 
 func (s Storage) FindLink(url string) string {
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
 	value, ok := s.Data[url]
 	if !ok {
 		return ""
@@ -25,6 +27,8 @@ func (s Storage) FindLink(url string) string {
 }
 
 func (s *Storage) PostLink(reqBody string, URLaddr string) string {
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
 	s.Counter++
 	s.Data["shortenLink"+strconv.Itoa(s.Counter)] = reqBody
 	shortenLink := URLaddr + "/" + "shortenLink" + strconv.Itoa(s.Counter)
