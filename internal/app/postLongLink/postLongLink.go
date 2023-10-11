@@ -1,8 +1,6 @@
 package postlonglink
 
 import (
-	"strconv"
-
 	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
 )
 
@@ -11,8 +9,5 @@ import (
 func PostLongLink(reqBody string, URLstorage *URLstorage.Storage, URLaddr string) string {
 	URLstorage.Mu.Lock()
 	defer URLstorage.Mu.Unlock()
-	URLstorage.Counter++
-	URLstorage.Data["shortenLink"+strconv.Itoa(URLstorage.Counter)] = reqBody
-	shortenLink := URLaddr + "/" + "shortenLink" + strconv.Itoa(URLstorage.Counter)
-	return shortenLink
+	return URLstorage.PostLink(reqBody, URLaddr)
 }
