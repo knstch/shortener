@@ -13,6 +13,7 @@ import (
 	config "github.com/knstch/shortener/cmd/config"
 	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
 	getShortenLink "github.com/knstch/shortener/internal/app/getShortenLink"
+	"github.com/knstch/shortener/internal/app/logger"
 	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
 )
 
@@ -46,8 +47,8 @@ func postURL(res http.ResponseWriter, req *http.Request) {
 // Роутер запросов
 func RequestsRouter() chi.Router {
 	r := chi.NewRouter()
-	r.Get("/{url}", getURL)
-	r.Post("/", postURL)
+	r.Get("/{url}", logger.RequestsLogger(getURL))
+	r.Post("/", logger.RequestsLogger(postURL))
 	return r
 }
 
