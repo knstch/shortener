@@ -32,6 +32,26 @@ func (r *loggingResponse) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode
 }
 
+func ServerShutDownLog(serverErr error) {
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+	defer logger.Sync()
+	sugar := *logger.Sugar()
+	sugar.Errorf("HTTP server shut down: %v", serverErr)
+}
+
+func ServerRuns(serverErr error) {
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+	defer logger.Sync()
+	sugar := *logger.Sugar()
+	sugar.Fatalf("HTTP server ListenAndServe: %v", serverErr)
+}
+
 // Middlware обработчик для запросов, записывает URI, method, duration
 func RequestsLogger(h http.HandlerFunc) http.HandlerFunc {
 	logger, err := zap.NewDevelopment()

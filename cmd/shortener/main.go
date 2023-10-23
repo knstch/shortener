@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,7 +12,7 @@ import (
 	config "github.com/knstch/shortener/cmd/config"
 	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
 	getShortenLink "github.com/knstch/shortener/internal/app/getShortenLink"
-	"github.com/knstch/shortener/internal/app/logger"
+	logger "github.com/knstch/shortener/internal/app/logger"
 	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
 )
 
@@ -66,12 +65,12 @@ func main() {
 		<-sigint
 
 		if err := srv.Shutdown(context.Background()); err != nil {
-			log.Printf("HTTP server shut down: %v", err)
+			logger.ServerShutDownLog(err)
 		}
 		close(idleConnsClosed)
 	}()
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		log.Fatalf("HTTP server ListenAndServe: %v", err)
+		logger.ServerRuns(err)
 	}
 	<-idleConnsClosed
 }
