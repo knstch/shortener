@@ -51,7 +51,7 @@ func postURLJSON(res http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(http.StatusOK)
+	res.WriteHeader(201)
 	res.Write([]byte(postLongLinkJSON.PostLongLinkJSON(body)))
 }
 
