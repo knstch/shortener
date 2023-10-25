@@ -14,6 +14,7 @@ import (
 	getShortenLink "github.com/knstch/shortener/internal/app/getShortenLink"
 	logger "github.com/knstch/shortener/internal/app/logger"
 	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
+	postLongLinkJSON "github.com/knstch/shortener/internal/app/postLongLinkJSON"
 )
 
 // Вызываем для передачи данных в функцию getURL
@@ -43,11 +44,23 @@ func postURL(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte(postLongLink.PostLongLink(string(body), &URLstorage.StorageURLs, config.ReadyConfig.BaseURL)))
 }
 
+// Передаем json-объект и получаем в ответе короткий URL в виде json-объекта
+func postURLJSON(res http.ResponseWriter, req *http.Request) {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		panic(err)
+	}
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusOK)
+	res.Write([]byte(postLongLinkJSON.PostLongLinkJSON(body)))
+}
+
 // Роутер запросов
 func RequestsRouter() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/{url}", logger.RequestsLogger(getURL))
 	r.Post("/", logger.RequestsLogger(postURL))
+	r.Post("/api/shorten", logger.RequestsLogger(postURLJSON))
 	return r
 }
 

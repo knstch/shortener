@@ -32,34 +32,50 @@ func (r *loggingResponse) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode
 }
 
+var logger, err = zap.NewDevelopment()
+var sugar = *logger.Sugar()
+
+// Ошибка в случае падения сервера
 func ServerShutDownLog(serverErr error) {
-	logger, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)
 	}
 	defer logger.Sync()
-	sugar := *logger.Sugar()
 	sugar.Errorf("HTTP server shut down: %v", serverErr)
 }
 
+// Ошибка во время работы сервера
 func ServerRuns(serverErr error) {
-	logger, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)
 	}
 	defer logger.Sync()
-	sugar := *logger.Sugar()
 	sugar.Fatalf("HTTP server ListenAndServe: %v", serverErr)
+}
+
+// Ошибка во время декодинга json-объекта
+func PostLongLinkJSONError(serverErr error) {
+	if err != nil {
+		panic(err)
+	}
+	defer logger.Sync()
+	sugar.Errorf("Failed to decode json: %v", serverErr)
+}
+
+func PostLongLinkJSONMarshalError(serverErr error) {
+	if err != nil {
+		panic(err)
+	}
+	defer logger.Sync()
+	sugar.Errorf("Failed marshal JSON: %v", serverErr)
 }
 
 // Middlware обработчик для запросов, записывает URI, method, duration
 func RequestsLogger(h http.HandlerFunc) http.HandlerFunc {
-	logger, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)
 	}
 	defer logger.Sync()
-	sugar := *logger.Sugar()
 
 	logFn := func(res http.ResponseWriter, req *http.Request) {
 
