@@ -29,7 +29,7 @@ func PostLongLinkJSON(req []byte) []uint8 {
 	}
 	resp, err := json.Marshal(resultJSON)
 	if err != nil {
-		logger.PostLongLinkJSONMarshalError(err)
+		logger.ErrorLogger("Fail during convertion to json: ", err)
 	}
 	return resp
 }

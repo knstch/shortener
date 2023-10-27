@@ -23,13 +23,11 @@ func (gw *gzipWriter) Header() http.Header {
 }
 
 func (gw *gzipWriter) Write(b []byte) (int, error) {
-	return gw.res.Write(b)
+	return gw.zw.Write(b)
 }
 
 func (gw *gzipWriter) WriteHeader(statusCode int) {
-	if statusCode < 300 {
-		gw.Header().Set("Content-Encoding", "gzip")
-	}
+	gw.res.Header().Set("Content-Encoding", "gzip")
 	gw.res.WriteHeader(statusCode)
 }
 

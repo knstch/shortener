@@ -40,7 +40,7 @@ func getURL(res http.ResponseWriter, req *http.Request) {
 func postURL(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		panic(err)
+		logger.ErrorLogger("Error during reading body: ", err)
 	}
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(201)
@@ -51,7 +51,7 @@ func postURL(res http.ResponseWriter, req *http.Request) {
 func postURLJSON(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		panic(err)
+		logger.ErrorLogger("Error during opening body: ", err)
 	}
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(201)
@@ -74,6 +74,7 @@ func gzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
 			decompressedReq, err := gzipCompressor.NewCompressReader(req.Body)
 			if err != nil {
 				res.WriteHeader(http.StatusInternalServerError)
+				logger.ErrorLogger("Error during decompression: ", err)
 				return
 			}
 			req.Body = decompressedReq
@@ -107,12 +108,12 @@ func main() {
 		<-sigint
 
 		if err := srv.Shutdown(context.Background()); err != nil {
-			logger.ServerShutDownLog(err)
+			logger.ErrorLogger("Shutdown error", err)
 		}
 		close(idleConnsClosed)
 	}()
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		logger.ServerRuns(err)
+		logger.ErrorLogger("Run error", err)
 	}
 	<-idleConnsClosed
 }
