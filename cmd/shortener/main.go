@@ -6,12 +6,15 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
 	config "github.com/knstch/shortener/cmd/config"
 	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
 	getShortenLink "github.com/knstch/shortener/internal/app/getShortenLink"
+
+	gzipCompressor "github.com/knstch/shortener/internal/app/gzipCompressor"
 	logger "github.com/knstch/shortener/internal/app/logger"
 	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
 	postLongLinkJSON "github.com/knstch/shortener/internal/app/postLongLinkJSON"
@@ -55,12 +58,38 @@ func postURLJSON(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte(postLongLinkJSON.PostLongLinkJSON(body)))
 }
 
+func gzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		originalRes := res
+		if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") &&
+			(strings.Contains(req.Header.Get("Content-Type"), "application/json") ||
+				strings.Contains(req.Header.Get("Content-Type"), "text/html")) {
+			compressedRes := gzipCompressor.NewGzipWriter(res)
+			originalRes = compressedRes
+			defer compressedRes.Close()
+		}
+		if strings.Contains(req.Header.Get("Content-Encoding"), "gzip") &&
+			(strings.Contains(req.Header.Get("Content-Type"), "application/json") ||
+				strings.Contains(req.Header.Get("Content-Type"), "text/html")) {
+			decompressedReq, err := gzipCompressor.NewCompressReader(req.Body)
+			if err != nil {
+				res.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			req.Body = decompressedReq
+			defer decompressedReq.Close()
+		}
+
+		h.ServeHTTP(originalRes, req)
+	}
+}
+
 // Роутер запросов
 func RequestsRouter() chi.Router {
 	r := chi.NewRouter()
-	r.Get("/{url}", logger.RequestsLogger(getURL))
-	r.Post("/", logger.RequestsLogger(postURL))
-	r.Post("/api/shorten", logger.RequestsLogger(postURLJSON))
+	r.Get("/{url}", logger.RequestsLogger(gzipMiddleware(getURL)))
+	r.Post("/", logger.RequestsLogger(gzipMiddleware(postURL)))
+	r.Post("/api/shorten", logger.RequestsLogger(gzipMiddleware(postURLJSON)))
 	return r
 }
 
