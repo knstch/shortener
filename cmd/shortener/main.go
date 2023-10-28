@@ -58,8 +58,8 @@ func postURLJSON(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte(postLongLinkJSON.PostLongLinkJSON(body)))
 }
 
-func gzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
-	return func(res http.ResponseWriter, req *http.Request) {
+func gzipMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		originalRes := res
 		if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") &&
 			(strings.Contains(req.Header.Get("Content-Type"), "application/json") ||
@@ -82,16 +82,18 @@ func gzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
 		}
 
 		h.ServeHTTP(originalRes, req)
-	}
+	})
 }
 
 // Роутер запросов
 func RequestsRouter() chi.Router {
-	r := chi.NewRouter()
-	r.Get("/{url}", logger.RequestsLogger(gzipMiddleware(getURL)))
-	r.Post("/", logger.RequestsLogger(gzipMiddleware(postURL)))
-	r.Post("/api/shorten", logger.RequestsLogger(gzipMiddleware(postURLJSON)))
-	return r
+	router := chi.NewRouter()
+	router.Use(logger.RequestsLogger)
+	router.Use(gzipMiddleware)
+	router.Get("/{url}", getURL)
+	router.Post("/", postURL)
+	router.Post("/api/shorten", postURLJSON)
+	return router
 }
 
 func main() {

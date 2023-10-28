@@ -42,7 +42,7 @@ func ErrorLogger(msg string, serverErr error) {
 }
 
 // Middlware обработчик для запросов, записывает URI, method, duration
-func RequestsLogger(h http.HandlerFunc) http.HandlerFunc {
+func RequestsLogger(h http.Handler) http.Handler {
 	if err != nil {
 		panic(err)
 	}
