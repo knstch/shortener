@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/knstch/shortener/internal/app/logger"
+	logger "github.com/knstch/shortener/internal/app/logger"
 )
 
 type gzipWriter struct {
@@ -30,7 +30,9 @@ func (gw *gzipWriter) Write(b []byte) (int, error) {
 }
 
 func (gw *gzipWriter) WriteHeader(statusCode int) {
-	gw.res.Header().Set("Content-Encoding", "gzip")
+	if statusCode < 300 {
+		gw.res.Header().Set("Content-Encoding", "gzip")
+	}
 	gw.res.WriteHeader(statusCode)
 }
 
@@ -63,7 +65,7 @@ func (gr *gzipReader) Close() error {
 	if err := gr.req.Close(); err != nil {
 		return err
 	}
-	return gr.req.Close()
+	return gr.zr.Close()
 }
 
 func GzipMiddleware(h http.Handler) http.Handler {

@@ -25,7 +25,6 @@ func getURL(res http.ResponseWriter, req *http.Request) {
 	url := chi.URLParam(req, "url")
 	if shortenURL := getShortenLink.GetShortenLink(url, URLstorage.StorageURLs); shortenURL != "" {
 		res.Header().Set("Content-Type", "text/plain")
-		res.Header().Set("Content-Encoding", "gzip")
 		res.Header().Set("Location", shortenURL)
 		res.WriteHeader(307)
 		res.Write([]byte(shortenURL))
