@@ -51,7 +51,7 @@ func NewCompressReader(req io.ReadCloser) (*gzipReader, error) {
 	return &gzipReader{
 		req: req,
 		zr:  zr,
-	}, err
+	}, nil
 }
 
 func (gr *gzipReader) Read(b []byte) (n int, err error) {
