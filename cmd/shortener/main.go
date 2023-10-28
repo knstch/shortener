@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -58,38 +57,11 @@ func postURLJSON(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte(postLongLinkJSON.PostLongLinkJSON(body)))
 }
 
-func gzipMiddleware(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		originalRes := res
-		if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") &&
-			(strings.Contains(req.Header.Get("Content-Type"), "application/json") ||
-				strings.Contains(req.Header.Get("Content-Type"), "text/html")) {
-			compressedRes := gzipCompressor.NewGzipWriter(res)
-			originalRes = compressedRes
-			defer compressedRes.Close()
-		}
-		if strings.Contains(req.Header.Get("Content-Encoding"), "gzip") &&
-			(strings.Contains(req.Header.Get("Content-Type"), "application/json") ||
-				strings.Contains(req.Header.Get("Content-Type"), "text/html")) {
-			decompressedReq, err := gzipCompressor.NewCompressReader(req.Body)
-			if err != nil {
-				res.WriteHeader(http.StatusInternalServerError)
-				logger.ErrorLogger("Error during decompression: ", err)
-				return
-			}
-			req.Body = decompressedReq
-			defer decompressedReq.Close()
-		}
-
-		h.ServeHTTP(originalRes, req)
-	})
-}
-
 // Роутер запросов
 func RequestsRouter() chi.Router {
 	router := chi.NewRouter()
 	router.Use(logger.RequestsLogger)
-	router.Use(gzipMiddleware)
+	router.Use(gzipCompressor.GzipMiddleware)
 	router.Get("/{url}", getURL)
 	router.Post("/", postURL)
 	router.Post("/api/shorten", postURLJSON)

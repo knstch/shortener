@@ -4,6 +4,9 @@ import (
 	"compress/gzip"
 	"io"
 	"net/http"
+	"strings"
+
+	"github.com/knstch/shortener/internal/app/logger"
 )
 
 type gzipWriter struct {
@@ -11,7 +14,7 @@ type gzipWriter struct {
 	zw  *gzip.Writer
 }
 
-func NewGzipWriter(res http.ResponseWriter) *gzipWriter {
+func newGzipWriter(res http.ResponseWriter) *gzipWriter {
 	return &gzipWriter{
 		res: res,
 		zw:  gzip.NewWriter(res),
@@ -42,7 +45,7 @@ type gzipReader struct {
 	zr  *gzip.Reader
 }
 
-func NewCompressReader(req io.ReadCloser) (*gzipReader, error) {
+func newCompressReader(req io.ReadCloser) (*gzipReader, error) {
 	zr, err := gzip.NewReader(req)
 	if err != nil {
 		return nil, err
@@ -63,4 +66,32 @@ func (gr *gzipReader) Close() error {
 		return err
 	}
 	return gr.req.Close()
+}
+
+func GzipMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		originalRes := res
+		supportsGzip := strings.Contains(req.Header.Get("Accept-Encoding"), "gzip")
+		contentTypeJSON := strings.Contains(req.Header.Get("Content-Type"), "application/json")
+		contentTypeText := strings.Contains(req.Header.Get("Content-Type"), "text/html")
+		contentEncodingGzip := strings.Contains(req.Header.Get("Content-Encoding"), "gzip")
+		if contentTypeJSON || contentTypeText {
+			if supportsGzip {
+				compressedRes := newGzipWriter(res)
+				originalRes = compressedRes
+				defer compressedRes.Close()
+			}
+			if contentEncodingGzip {
+				decompressedReq, err := newCompressReader(req.Body)
+				if err != nil {
+					res.WriteHeader(http.StatusInternalServerError)
+					logger.ErrorLogger("Error during decompression: ", err)
+					return
+				}
+				req.Body = decompressedReq
+				defer decompressedReq.Close()
+			}
+		}
+		h.ServeHTTP(originalRes, req)
+	})
 }
