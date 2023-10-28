@@ -32,17 +32,10 @@ func (r *loggingResponse) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode
 }
 
-var logger, err = zap.NewDevelopment()
-var sugar = *logger.Sugar()
-
-// Логер ошибки
-func ErrorLogger(msg string, serverErr error) {
-	defer logger.Sync()
-	sugar.Errorf("Error: %v\nDetails: %v\n", msg, serverErr)
-}
-
 // Middlware обработчик для запросов, записывает URI, method, duration
 func RequestsLogger(h http.Handler) http.Handler {
+	var logger, err = zap.NewDevelopment()
+	var sugar = *logger.Sugar()
 	if err != nil {
 		panic(err)
 	}

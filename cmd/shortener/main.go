@@ -13,10 +13,11 @@ import (
 	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
 	getShortenLink "github.com/knstch/shortener/internal/app/getShortenLink"
 
-	gzipCompressor "github.com/knstch/shortener/internal/app/gzipCompressor"
-	logger "github.com/knstch/shortener/internal/app/logger"
+	postLongLinkJSON "github.com/knstch/shortener/internal/app/api/postLongLinkJSON"
+	errorLogger "github.com/knstch/shortener/internal/app/errorLogger"
+	gzipCompressor "github.com/knstch/shortener/internal/app/middleware/gzipCompressor"
+	logger "github.com/knstch/shortener/internal/app/middleware/loggerMiddleware"
 	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
-	postLongLinkJSON "github.com/knstch/shortener/internal/app/postLongLinkJSON"
 )
 
 // Вызываем для передачи данных в функцию getURL
@@ -39,7 +40,7 @@ func getURL(res http.ResponseWriter, req *http.Request) {
 func postURL(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		logger.ErrorLogger("Error during reading body: ", err)
+		errorLogger.ErrorLogger("Error during reading body: ", err)
 	}
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(201)
@@ -50,7 +51,7 @@ func postURL(res http.ResponseWriter, req *http.Request) {
 func postURLJSON(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		logger.ErrorLogger("Error during opening body: ", err)
+		errorLogger.ErrorLogger("Error during opening body: ", err)
 	}
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(201)
@@ -82,12 +83,12 @@ func main() {
 		<-sigint
 
 		if err := srv.Shutdown(context.Background()); err != nil {
-			logger.ErrorLogger("Shutdown error", err)
+			errorLogger.ErrorLogger("Shutdown error", err)
 		}
 		close(idleConnsClosed)
 	}()
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		logger.ErrorLogger("Run error", err)
+		errorLogger.ErrorLogger("Run error", err)
 	}
 	<-idleConnsClosed
 }
