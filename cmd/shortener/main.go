@@ -11,6 +11,7 @@ import (
 
 	config "github.com/knstch/shortener/cmd/config"
 	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
+
 	getShortenLink "github.com/knstch/shortener/internal/app/getShortenLink"
 
 	postLongLinkJSON "github.com/knstch/shortener/internal/app/api/postLongLinkJSON"
@@ -61,16 +62,20 @@ func postURLJSON(res http.ResponseWriter, req *http.Request) {
 // Роутер запросов
 func RequestsRouter() chi.Router {
 	router := chi.NewRouter()
-	router.Use(logger.RequestsLogger)
 	router.Use(gzipCompressor.GzipMiddleware)
+	router.Use(logger.RequestsLogger)
 	router.Get("/{url}", getURL)
 	router.Post("/", postURL)
 	router.Post("/api/shorten", postURLJSON)
 	return router
 }
 
-func main() {
+func init() {
 	config.ParseConfig()
+	URLstorage.StorageURLs.Load(config.ReadyConfig.FileStorage)
+}
+
+func main() {
 	srv := http.Server{
 		Addr:    config.ReadyConfig.ServerAddr,
 		Handler: RequestsRouter(),
