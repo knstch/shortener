@@ -28,7 +28,7 @@ func (storage *Storage) Save(fname string) error {
 	if err != nil {
 		return err
 	}
-	if len(storage.Data) > 30 || len(storage.Data) == 2 {
+	if len(storage.Data) > 30 || len(storage.Data) < 2 {
 		return os.WriteFile(fname, data, 0666)
 	}
 	return nil
