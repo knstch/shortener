@@ -11,27 +11,27 @@ import (
 
 type (
 	Storage struct {
-		Data    []Links     `json:"links"`
-		Counter int         `json:"counter"`
-		Mu      *sync.Mutex `json:"-"`
-	}
-	Links struct {
-		ShortLink string `json:"short_link"`
-		LongLink  string `json:"long_link"`
+		Data    map[string]string `json:"links"`
+		Counter int               `json:"counter"`
+		Mu      *sync.Mutex       `json:"-"`
 	}
 )
 
 var StorageURLs = Storage{
-	Mu: &sync.Mutex{},
+	Mu:   &sync.Mutex{},
+	Data: make(map[string]string),
 }
 
 // Сохраняем данные в файл
 func (storage *Storage) Save(fname string) error {
-	data, err := json.Marshal(storage)
+	data, err := json.MarshalIndent(storage, "", "   ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(fname, data, 0666)
+	if len(storage.Data) > 30 {
+		return os.WriteFile(fname, data, 0666)
+	}
+	return nil
 }
 
 // Загружаем данные из файла
@@ -50,22 +50,18 @@ func (storage *Storage) Load(fname string) error {
 func (storage Storage) FindLink(url string) string {
 	storage.Mu.Lock()
 	defer storage.Mu.Unlock()
-	for _, links := range storage.Data {
-		if links.ShortLink == url {
-			return links.LongLink
-		}
+	value, ok := storage.Data[url]
+	if !ok {
+		return ""
 	}
-	return ""
+	return value
 }
 
 func (storage *Storage) PostLink(reqBody string, URLaddr string) string {
 	storage.Mu.Lock()
 	defer storage.Mu.Unlock()
 	storage.Counter++
-	storage.Data = append(storage.Data, Links{
-		ShortLink: "shortenLink" + strconv.Itoa(storage.Counter),
-		LongLink:  reqBody,
-	})
+	storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = reqBody
 	shortenLink := URLaddr + "/" + "shortenLink" + strconv.Itoa(storage.Counter)
 	storage.Save(config.ReadyConfig.FileStorage)
 	return shortenLink

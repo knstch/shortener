@@ -11,14 +11,10 @@ import (
 func TestGetShortenLink(t *testing.T) {
 
 	var testStorage = URLstorage.Storage{
-		Data: []URLstorage.Links{},
+		Data: make(map[string]string),
 		Mu:   &sync.Mutex{},
 	}
-	var data = URLstorage.Links{
-		ShortLink: "shortenLink1",
-		LongLink:  "https://practicum.yandex.ru/",
-	}
-	testStorage.Data = append(testStorage.Data, data)
+	testStorage.Data["shortenLink1"] = "https://practicum.yandex.ru/"
 	tests := []struct {
 		name    string
 		want    string

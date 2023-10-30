@@ -26,7 +26,7 @@ func TestPostLongLink(t *testing.T) {
 		},
 	}
 	var testStorage = URLstorage.Storage{
-		Data: []URLstorage.Links{},
+		Data: make(map[string]string),
 		Mu:   &sync.Mutex{},
 	}
 	for i, tt := range tests {
