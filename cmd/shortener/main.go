@@ -70,12 +70,9 @@ func RequestsRouter() chi.Router {
 	return router
 }
 
-func init() {
+func main() {
 	config.ParseConfig()
 	URLstorage.StorageURLs.Load(config.ReadyConfig.FileStorage)
-}
-
-func main() {
 	srv := http.Server{
 		Addr:    config.ReadyConfig.ServerAddr,
 		Handler: RequestsRouter(),
