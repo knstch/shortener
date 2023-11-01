@@ -15,7 +15,6 @@ func TestGetShortenLink(t *testing.T) {
 		Mu:   &sync.Mutex{},
 	}
 	testStorage.Data["shortenLink1"] = "https://practicum.yandex.ru/"
-
 	tests := []struct {
 		name    string
 		want    string

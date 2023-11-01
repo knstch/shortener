@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,7 +11,13 @@ import (
 
 	config "github.com/knstch/shortener/cmd/config"
 	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
+
 	getShortenLink "github.com/knstch/shortener/internal/app/getShortenLink"
+
+	postLongLinkJSON "github.com/knstch/shortener/internal/app/api/postLongLinkJSON"
+	errorLogger "github.com/knstch/shortener/internal/app/errorLogger"
+	gzipCompressor "github.com/knstch/shortener/internal/app/middleware/gzipCompressor"
+	logger "github.com/knstch/shortener/internal/app/middleware/loggerMiddleware"
 	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
 )
 
@@ -36,23 +41,38 @@ func getURL(res http.ResponseWriter, req *http.Request) {
 func postURL(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		panic(err)
+		errorLogger.ErrorLogger("Error during reading body: ", err)
 	}
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(201)
 	res.Write([]byte(postLongLink.PostLongLink(string(body), &URLstorage.StorageURLs, config.ReadyConfig.BaseURL)))
 }
 
+// Передаем json-объект и получаем в ответе короткий URL в виде json-объекта
+func postURLJSON(res http.ResponseWriter, req *http.Request) {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		errorLogger.ErrorLogger("Error during opening body: ", err)
+	}
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(201)
+	res.Write([]byte(postLongLinkJSON.PostLongLinkJSON(body)))
+}
+
 // Роутер запросов
 func RequestsRouter() chi.Router {
-	r := chi.NewRouter()
-	r.Get("/{url}", getURL)
-	r.Post("/", postURL)
-	return r
+	router := chi.NewRouter()
+	router.Use(gzipCompressor.GzipMiddleware)
+	router.Use(logger.RequestsLogger)
+	router.Get("/{url}", getURL)
+	router.Post("/", postURL)
+	router.Post("/api/shorten", postURLJSON)
+	return router
 }
 
 func main() {
 	config.ParseConfig()
+	URLstorage.StorageURLs.Load(config.ReadyConfig.FileStorage)
 	srv := http.Server{
 		Addr:    config.ReadyConfig.ServerAddr,
 		Handler: RequestsRouter(),
@@ -65,12 +85,12 @@ func main() {
 		<-sigint
 
 		if err := srv.Shutdown(context.Background()); err != nil {
-			log.Printf("HTTP server shut down: %v", err)
+			errorLogger.ErrorLogger("Shutdown error", err)
 		}
 		close(idleConnsClosed)
 	}()
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		log.Fatalf("HTTP server ListenAndServe: %v", err)
+		errorLogger.ErrorLogger("Run error", err)
 	}
 	<-idleConnsClosed
 }
