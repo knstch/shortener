@@ -39,4 +39,10 @@ func ParseConfig() {
 	if dbDSN := os.Getenv("DATABASE_DSN"); dbDSN != "" {
 		ReadyConfig.DBDSN = dbDSN
 	}
+	if DBName := os.Getenv("POSTGRES_DB"); DBName != "" {
+		ReadyConfig.DBName = DBName
+	}
+	if DBPassword := os.Getenv("POSTGRES_PASSWORD"); DBPassword != "" {
+		ReadyConfig.DBPassword = DBPassword
+	}
 }
