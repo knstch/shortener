@@ -14,6 +14,7 @@ import (
 
 	getShortenLink "github.com/knstch/shortener/internal/app/getShortenLink"
 
+	DBConnect "github.com/knstch/shortener/internal/app/DBConnect"
 	postLongLinkJSON "github.com/knstch/shortener/internal/app/api/postLongLinkJSON"
 	errorLogger "github.com/knstch/shortener/internal/app/errorLogger"
 	gzipCompressor "github.com/knstch/shortener/internal/app/middleware/gzipCompressor"
@@ -59,6 +60,18 @@ func postURLJSON(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte(postLongLinkJSON.PostLongLinkJSON(body)))
 }
 
+// Проверяем соединение с базой данных
+func pingDB(res http.ResponseWriter, req *http.Request) {
+	if err := DBConnect.OpenConnection(config.ReadyConfig.DBDSN, config.ReadyConfig.DBUsername,
+		config.ReadyConfig.DBPassword, config.ReadyConfig.DBName); err != nil {
+		http.Error(res, "Can't connect to DB", http.StatusInternalServerError)
+	} else {
+		res.Header().Set("Content-Type", "text/plain")
+		res.WriteHeader(http.StatusOK)
+		res.Write([]byte("Connection is set"))
+	}
+}
+
 // Роутер запросов
 func RequestsRouter() chi.Router {
 	router := chi.NewRouter()
@@ -67,6 +80,7 @@ func RequestsRouter() chi.Router {
 	router.Get("/{url}", getURL)
 	router.Post("/", postURL)
 	router.Post("/api/shorten", postURLJSON)
+	router.Get("/ping", pingDB)
 	return router
 }
 
