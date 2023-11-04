@@ -11,7 +11,7 @@ import (
 )
 
 func OpenConnection(host string, user string, password string, dbname string) error {
-	ps := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", host, user, password, dbname)
+	ps := fmt.Sprintf("host=%s user=%s password=%s dbname=%s", host, user, password, dbname)
 
 	db, err := sql.Open("pgx", ps)
 	if err != nil {
