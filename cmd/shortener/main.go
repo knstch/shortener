@@ -62,8 +62,7 @@ func postURLJSON(res http.ResponseWriter, req *http.Request) {
 
 // Проверяем соединение с базой данных
 func pingDB(res http.ResponseWriter, req *http.Request) {
-	if err := DBConnect.OpenConnection(config.ReadyConfig.DBDSN, config.ReadyConfig.DBUsername,
-		config.ReadyConfig.DBPassword, config.ReadyConfig.DBName); err != nil {
+	if err := DBConnect.OpenConnection(config.ReadyConfig.DSN); err != nil {
 		http.Error(res, "Can't connect to DB", http.StatusInternalServerError)
 	} else {
 		res.Header().Set("Content-Type", "text/plain")

@@ -3,17 +3,14 @@ package dbconnect
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	errorLogger "github.com/knstch/shortener/internal/app/errorLogger"
 )
 
-func OpenConnection(host string, user string, password string, dbname string) error {
-	ps := fmt.Sprintf("host=%s user=%s password=%s dbname=%s", host, user, password, dbname)
-
-	db, err := sql.Open("pgx", ps)
+func OpenConnection(dsn string) error {
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		errorLogger.ErrorLogger("Can't open a new database: ", err)
 		return err
