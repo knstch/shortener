@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	config "github.com/knstch/shortener/cmd/config"
+	findData "github.com/knstch/shortener/internal/app/DB/findData"
 	insertData "github.com/knstch/shortener/internal/app/DB/insertData"
 )
 
@@ -48,23 +49,31 @@ func (storage *Storage) Load(fname string) error {
 }
 
 // Ищем ссылку
-func (storage Storage) FindLink(url string) string {
+func (storage Storage) FindLink(url string) (string, error) {
 	storage.Mu.Lock()
 	defer storage.Mu.Unlock()
-	value, ok := storage.Data[url]
-	if !ok {
-		return ""
+	if config.ReadyConfig.DSN != "" {
+		return findData.FindData(config.ReadyConfig.DSN, url)
+	} else {
+		value, ok := storage.Data[url]
+		if !ok {
+			return "", nil
+		}
+		return value, nil
 	}
-	return value
 }
 
 func (storage *Storage) PostLink(reqBody string, URLaddr string) string {
 	storage.Mu.Lock()
 	defer storage.Mu.Unlock()
 	storage.Counter++
-	storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = reqBody
 	shortenLink := URLaddr + "/" + "shortenLink" + strconv.Itoa(storage.Counter)
-	storage.Save(config.ReadyConfig.FileStorage)
-	insertData.InsertData(config.ReadyConfig.DSN, "shortenLink"+strconv.Itoa(storage.Counter), reqBody)
-	return shortenLink
+	if config.ReadyConfig.DSN != "" {
+		insertData.InsertData(config.ReadyConfig.DSN, "shortenLink"+strconv.Itoa(storage.Counter), reqBody)
+		return shortenLink
+	} else {
+		storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = reqBody
+		storage.Save(config.ReadyConfig.FileStorage)
+		return shortenLink
+	}
 }

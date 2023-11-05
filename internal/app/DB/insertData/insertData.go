@@ -29,6 +29,6 @@ func InsertData(dsn string, shortLink string, longLink string) error {
 		logger.ErrorLogger("Error when insert data: ", err)
 	}
 
-	logger.InfoLogger("Rows affected when inserting data: %d" + string(rune(rows)))
+	logger.InfoLogger("Rows affected when inserting data: %v" + string(rune(rows)))
 	return nil
 }

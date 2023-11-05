@@ -27,7 +27,10 @@ import (
 // и написания ответа в зависимости от ответа getURL
 func getURL(res http.ResponseWriter, req *http.Request) {
 	url := chi.URLParam(req, "url")
-	if shortenURL := getShortenLink.GetShortenLink(url, URLstorage.StorageURLs); shortenURL != "" {
+	if shortenURL, err := getShortenLink.GetShortenLink(url, URLstorage.StorageURLs); shortenURL != "" {
+		if err != nil {
+			logger.ErrorLogger("Can't find link: ", err)
+		}
 		res.Header().Set("Content-Type", "text/plain")
 		res.Header().Set("Location", shortenURL)
 		res.WriteHeader(307)

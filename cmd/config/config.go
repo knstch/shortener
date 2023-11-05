@@ -9,7 +9,7 @@ type Config struct {
 	ServerAddr  string
 	BaseURL     string
 	FileStorage string
-	DSN       string
+	DSN         string
 }
 
 var ReadyConfig Config
@@ -19,7 +19,8 @@ func ParseConfig() {
 	flag.StringVar(&ReadyConfig.ServerAddr, "a", ":8080", "port to run server")
 	flag.StringVar(&ReadyConfig.BaseURL, "b", "http://localhost"+ReadyConfig.ServerAddr, "address to run server")
 	flag.StringVar(&ReadyConfig.FileStorage, "f", "short-url-db.json", "file to save links")
-	flag.StringVar(&ReadyConfig.DSN, "d", "host=localhost user=postgres password=Xer@0101 dbname=shorten_URLs sslmode=disable", "DSN to access DB")
+	// DSN host=localhost user=postgres password=Xer@0101 dbname=shorten_URLs sslmode=disable
+	flag.StringVar(&ReadyConfig.DSN, "d", "", "DSN to access DB")
 	flag.Parse()
 	if serverAddr := os.Getenv("SERVER_ADDRESS"); serverAddr != "" {
 		ReadyConfig.ServerAddr = serverAddr
