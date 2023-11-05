@@ -65,8 +65,6 @@ func (storage *Storage) PostLink(reqBody string, URLaddr string) string {
 	storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = reqBody
 	shortenLink := URLaddr + "/" + "shortenLink" + strconv.Itoa(storage.Counter)
 	storage.Save(config.ReadyConfig.FileStorage)
-	if config.ReadyConfig.DSN != "" {
-		insertData.InsertData(config.ReadyConfig.DSN, "shortenLink"+strconv.Itoa(storage.Counter), reqBody)
-	}
+	defer insertData.InsertData(config.ReadyConfig.DSN, "shortenLink"+strconv.Itoa(storage.Counter), reqBody)
 	return shortenLink
 }
