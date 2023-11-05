@@ -6,7 +6,7 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	errorLogger "github.com/knstch/shortener/internal/app/errorLogger"
+	errorLogger "github.com/knstch/shortener/internal/app/logger"
 )
 
 func OpenConnection(dsn string) error {

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	logger "github.com/knstch/shortener/internal/app/errorLogger"
+	logger "github.com/knstch/shortener/internal/app/logger"
 )
 
 func InitDB(dsn string) error {
@@ -33,7 +33,7 @@ func InitDB(dsn string) error {
 		logger.ErrorLogger("Error when getting rows affected: ", err)
 		return err
 	}
-	logger.InfoLogger("Rows affected when creating table: " + string(rune(rows)))
+	logger.InfoLogger("Table inited, rows affected: " + string(rune(rows)))
 
 	return nil
 }

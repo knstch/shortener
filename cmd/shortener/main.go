@@ -17,9 +17,9 @@ import (
 	DBConnect "github.com/knstch/shortener/internal/app/DB/DBConnect"
 	initDB "github.com/knstch/shortener/internal/app/DB/initDB"
 	postLongLinkJSON "github.com/knstch/shortener/internal/app/api/postLongLinkJSON"
-	errorLogger "github.com/knstch/shortener/internal/app/errorLogger"
+	logger "github.com/knstch/shortener/internal/app/logger"
 	gzipCompressor "github.com/knstch/shortener/internal/app/middleware/gzipCompressor"
-	logger "github.com/knstch/shortener/internal/app/middleware/loggerMiddleware"
+	loggerMiddleware "github.com/knstch/shortener/internal/app/middleware/loggerMiddleware"
 	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
 )
 
@@ -43,7 +43,7 @@ func getURL(res http.ResponseWriter, req *http.Request) {
 func postURL(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		errorLogger.ErrorLogger("Error during reading body: ", err)
+		logger.ErrorLogger("Error during reading body: ", err)
 	}
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(201)
@@ -54,7 +54,7 @@ func postURL(res http.ResponseWriter, req *http.Request) {
 func postURLJSON(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		errorLogger.ErrorLogger("Error during opening body: ", err)
+		logger.ErrorLogger("Error during opening body: ", err)
 	}
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(201)
@@ -76,7 +76,7 @@ func pingDB(res http.ResponseWriter, req *http.Request) {
 func RequestsRouter() chi.Router {
 	router := chi.NewRouter()
 	router.Use(gzipCompressor.GzipMiddleware)
-	router.Use(logger.RequestsLogger)
+	router.Use(loggerMiddleware.RequestsLogger)
 	router.Get("/{url}", getURL)
 	router.Post("/", postURL)
 	router.Post("/api/shorten", postURLJSON)
@@ -102,12 +102,12 @@ func main() {
 		<-sigint
 
 		if err := srv.Shutdown(context.Background()); err != nil {
-			errorLogger.ErrorLogger("Shutdown error", err)
+			logger.ErrorLogger("Shutdown error", err)
 		}
 		close(idleConnsClosed)
 	}()
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		errorLogger.ErrorLogger("Run error", err)
+		logger.ErrorLogger("Run error", err)
 	}
 	<-idleConnsClosed
 }

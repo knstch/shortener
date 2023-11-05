@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	errorLogger "github.com/knstch/shortener/internal/app/errorLogger"
+	errorLogger "github.com/knstch/shortener/internal/app/logger"
 )
 
 type gzipWriter struct {

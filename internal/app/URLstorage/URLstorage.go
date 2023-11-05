@@ -6,7 +6,8 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/knstch/shortener/cmd/config"
+	config "github.com/knstch/shortener/cmd/config"
+	insertData "github.com/knstch/shortener/internal/app/DB/insertData"
 )
 
 type (
@@ -64,5 +65,6 @@ func (storage *Storage) PostLink(reqBody string, URLaddr string) string {
 	storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = reqBody
 	shortenLink := URLaddr + "/" + "shortenLink" + strconv.Itoa(storage.Counter)
 	storage.Save(config.ReadyConfig.FileStorage)
+	insertData.InsertData(config.ReadyConfig.DSN, "shortenLink"+strconv.Itoa(storage.Counter), reqBody)
 	return shortenLink
 }

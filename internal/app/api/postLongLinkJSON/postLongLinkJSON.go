@@ -5,7 +5,7 @@ import (
 
 	config "github.com/knstch/shortener/cmd/config"
 	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
-	errorLogger "github.com/knstch/shortener/internal/app/errorLogger"
+	logger "github.com/knstch/shortener/internal/app/logger"
 	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
 )
 
@@ -29,7 +29,7 @@ func PostLongLinkJSON(req []byte) []uint8 {
 	}
 	resp, err := json.Marshal(resultJSON)
 	if err != nil {
-		errorLogger.ErrorLogger("Fail during convertion to json: ", err)
+		logger.ErrorLogger("Fail during convertion to json: ", err)
 	}
 	return resp
 }
