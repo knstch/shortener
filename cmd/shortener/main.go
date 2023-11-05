@@ -14,7 +14,8 @@ import (
 
 	getShortenLink "github.com/knstch/shortener/internal/app/getShortenLink"
 
-	DBConnect "github.com/knstch/shortener/internal/app/DBConnect"
+	DBConnect "github.com/knstch/shortener/internal/app/DB/DBConnect"
+	initDB "github.com/knstch/shortener/internal/app/DB/initDB"
 	postLongLinkJSON "github.com/knstch/shortener/internal/app/api/postLongLinkJSON"
 	errorLogger "github.com/knstch/shortener/internal/app/errorLogger"
 	gzipCompressor "github.com/knstch/shortener/internal/app/middleware/gzipCompressor"
@@ -86,6 +87,9 @@ func RequestsRouter() chi.Router {
 func main() {
 	config.ParseConfig()
 	URLstorage.StorageURLs.Load(config.ReadyConfig.FileStorage)
+	if config.ReadyConfig.DSN != "" {
+		initDB.InitDB(config.ReadyConfig.DSN)
+	}
 	srv := http.Server{
 		Addr:    config.ReadyConfig.ServerAddr,
 		Handler: RequestsRouter(),
