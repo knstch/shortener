@@ -9,6 +9,7 @@ import (
 	logger "github.com/knstch/shortener/internal/app/logger"
 )
 
+// Инициализация таблицы shorten_URLs с полями long_link text и short_link text
 func InitDB(dsn string) error {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -22,18 +23,9 @@ func InitDB(dsn string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	createDB, err := db.ExecContext(ctx, initialization)
-	if err != nil {
-		logger.ErrorLogger("Can't init database: ", err)
-		return err
-	}
+	db.ExecContext(ctx, initialization)
 
-	rows, err := createDB.RowsAffected()
-	if err != nil {
-		logger.ErrorLogger("Error when getting rows affected: ", err)
-		return err
-	}
-	logger.InfoLogger("Table inited, rows affected: " + string(rune(rows)))
+	logger.InfoLogger("Table inited")
 
 	return nil
 }

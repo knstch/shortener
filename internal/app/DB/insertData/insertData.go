@@ -9,6 +9,7 @@ import (
 	logger "github.com/knstch/shortener/internal/app/logger"
 )
 
+// Запись данных в БД
 func InsertData(dsn string, shortLink string, longLink string) error {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -20,15 +21,7 @@ func InsertData(dsn string, shortLink string, longLink string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	writeData, err := db.ExecContext(ctx, "INSERT INTO shorten_URLs(short_link, long_link) VALUES ($1, $2);", longLink, shortLink)
-	if err != nil {
-		logger.ErrorLogger("Error writing data: ", err)
-	}
-	rows, err := writeData.RowsAffected()
-	if err != nil {
-		logger.ErrorLogger("Error when insert data: ", err)
-	}
+	db.ExecContext(ctx, "INSERT INTO shorten_URLs(short_link, long_link) VALUES ($1, $2);", shortLink, longLink)
 
-	logger.InfoLogger("Rows affected when inserting data: %v" + string(rune(rows)))
 	return nil
 }

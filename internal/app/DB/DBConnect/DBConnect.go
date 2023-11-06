@@ -9,6 +9,7 @@ import (
 	errorLogger "github.com/knstch/shortener/internal/app/logger"
 )
 
+// Пинг базы данных
 func OpenConnection(dsn string) error {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {

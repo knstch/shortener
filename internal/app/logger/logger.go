@@ -13,6 +13,7 @@ func ErrorLogger(msg string, serverErr error) {
 	sugar.Errorf("Error: %v\nDetails: %v\n", msg, serverErr)
 }
 
+// Информативный логгер
 func InfoLogger(msg string) {
 	var logger, err = zap.NewDevelopment()
 	if err != nil {

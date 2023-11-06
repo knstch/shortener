@@ -2,26 +2,36 @@ package urlstorage
 
 import (
 	"encoding/json"
+	"math/rand"
 	"os"
-	"strconv"
 	"sync"
 
 	config "github.com/knstch/shortener/cmd/config"
+	checkDuplicate "github.com/knstch/shortener/internal/app/DB/checkDuplicate"
 	findData "github.com/knstch/shortener/internal/app/DB/findData"
 	insertData "github.com/knstch/shortener/internal/app/DB/insertData"
 )
 
 type (
 	Storage struct {
-		Data    map[string]string `json:"links"`
-		Counter int               `json:"counter"`
-		Mu      *sync.Mutex       `json:"-"`
+		Data map[string]string `json:"links"`
+		Mu   *sync.Mutex       `json:"-"`
 	}
 )
 
 var StorageURLs = Storage{
 	Mu:   &sync.Mutex{},
 	Data: make(map[string]string),
+}
+
+// Генератор короткой ссылки
+func shortLinkGenerator(length int) string {
+	chars := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, length)
+	for i := 0; i < length; i++ {
+		result[i] = chars[rand.Intn(len(chars))]
+	}
+	return string(result)
 }
 
 // Сохраняем данные в файл
@@ -63,16 +73,21 @@ func (storage Storage) FindLink(url string) (string, error) {
 	}
 }
 
+// Запись ссылки в базу данных или json хранилище. Если идет запись дубликата в БД,
+// возвращается уже существующая ссылка
 func (storage *Storage) PostLink(reqBody string, URLaddr string) string {
-	storage.Mu.Lock()
-	defer storage.Mu.Unlock()
-	storage.Counter++
-	shortenLink := URLaddr + "/" + "shortenLink" + strconv.Itoa(storage.Counter)
 	if config.ReadyConfig.DSN != "" {
-		insertData.InsertData(config.ReadyConfig.DSN, "shortenLink"+strconv.Itoa(storage.Counter), reqBody)
-		return shortenLink
+		if !checkDuplicate.CheckDuplicate(config.ReadyConfig.DSN, reqBody) {
+			shortenLink := shortLinkGenerator(5)
+			insertData.InsertData(config.ReadyConfig.DSN, shortenLink, reqBody)
+			return URLaddr + "/" + shortenLink
+		}
+		return URLaddr + "/" + checkDuplicate.FindShortLink(config.ReadyConfig.DSN, reqBody)
 	} else {
-		storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = reqBody
+		storage.Mu.Lock()
+		defer storage.Mu.Unlock()
+		shortenLink := URLaddr + "/" + shortLinkGenerator(5)
+		storage.Data[shortenLink] = reqBody
 		storage.Save(config.ReadyConfig.FileStorage)
 		return shortenLink
 	}

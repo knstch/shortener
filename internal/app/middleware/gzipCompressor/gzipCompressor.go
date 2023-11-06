@@ -66,6 +66,7 @@ func (gr *gzipReader) Close() error {
 	return gr.zr.Close()
 }
 
+// Сжимает данные
 func GzipMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		originalRes := res

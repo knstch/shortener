@@ -7,6 +7,7 @@ import (
 	"github.com/knstch/shortener/internal/app/logger"
 )
 
+// Поиск длинной ссылки по короткой
 func FindData(dsn string, shortLink string) (string, error) {
 	var longLink string
 	db, err := sql.Open("pgx", dsn)
@@ -16,7 +17,7 @@ func FindData(dsn string, shortLink string) (string, error) {
 	}
 	defer db.Close()
 
-	row := db.QueryRowContext(context.Background(), "SELECT long_link from shorten_URLs WHERE short_link = ?", shortLink)
+	row := db.QueryRowContext(context.Background(), "SELECT long_link from shorten_URLs WHERE short_link = $1", shortLink)
 	err = row.Scan(&longLink)
 	if err != nil {
 		logger.ErrorLogger("Can't write longLink: ", err)
