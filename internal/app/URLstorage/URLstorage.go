@@ -86,9 +86,9 @@ func (storage *Storage) PostLink(reqBody string, URLaddr string) string {
 	} else {
 		storage.Mu.Lock()
 		defer storage.Mu.Unlock()
-		shortenLink := URLaddr + "/" + shortLinkGenerator(5)
+		shortenLink := shortLinkGenerator(5)
 		storage.Data[shortenLink] = reqBody
 		storage.Save(config.ReadyConfig.FileStorage)
-		return shortenLink
+		return URLaddr + "/" + shortenLink
 	}
 }
