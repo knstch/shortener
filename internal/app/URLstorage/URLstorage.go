@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math/rand"
 	"os"
+	"strconv"
 	"sync"
 
 	config "github.com/knstch/shortener/cmd/config"
@@ -14,8 +15,9 @@ import (
 
 type (
 	Storage struct {
-		Data map[string]string `json:"links"`
-		Mu   *sync.Mutex       `json:"-"`
+		Data    map[string]string `json:"links"`
+		Counter int               `json:"counter"`
+		Mu      *sync.Mutex       `json:"-"`
 	}
 )
 
@@ -86,9 +88,9 @@ func (storage *Storage) PostLink(reqBody string, URLaddr string) string {
 	} else {
 		storage.Mu.Lock()
 		defer storage.Mu.Unlock()
-		shortenLink := shortLinkGenerator(5)
-		storage.Data[shortenLink] = reqBody
+		storage.Counter++
+		storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = reqBody
 		storage.Save(config.ReadyConfig.FileStorage)
-		return URLaddr + "/" + shortenLink
+		return URLaddr + "/shortenLink" + strconv.Itoa(storage.Counter)
 	}
 }
