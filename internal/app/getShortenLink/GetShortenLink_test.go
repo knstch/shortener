@@ -33,9 +33,7 @@ func TestGetShortenLink(t *testing.T) {
 	}
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			longLink, err := GetShortenLink((tests[i].request), testStorage)
-			assert.NoError(t, err)
-			assert.Equal(t, longLink, tests[i].want)
+			assert.Equal(t, GetShortenLink((tests[i].request), testStorage), tests[i].want)
 		})
 	}
 }
