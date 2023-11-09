@@ -71,7 +71,7 @@ func postBatch(res http.ResponseWriter, req *http.Request) {
 		logger.ErrorLogger("Can't read body: ", err)
 	}
 	res.Header().Set("Content-Type", "text/plain")
-	res.WriteHeader(http.StatusOK)
+	res.WriteHeader(201)
 	res.Write([]byte(batchRequest.PostBatch(body)))
 }
 
