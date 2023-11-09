@@ -2,7 +2,7 @@ package batchrequest
 
 import (
 	"encoding/json"
-	"strings"
+	"net/http"
 
 	config "github.com/knstch/shortener/cmd/config"
 	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
@@ -11,35 +11,35 @@ import (
 )
 
 type originalLink struct {
-	OriginalURL string `json:"original_url"`
+	OriginalURL   string `json:"original_url"`
+	CorrelationId string `json:"correlation_id"`
 }
 
 type shortLink struct {
-	Result string `json:"short_url"`
+	Result        string `json:"short_url"`
+	CorrelationId string `json:"correlation_id"`
 }
 
-func PostBatch(req []byte) []uint8 {
-	var shortLinks []string
-	var responseBatch []shortLink
-	trimedBatch := strings.Trim(string(req), `[]`)
-	splitedBatch := strings.Split(trimedBatch, ",")
-	for i := range splitedBatch {
-		var longLink originalLink
-		json.Unmarshal([]byte(splitedBatch[i]), &longLink)
-		shortLinks = append(shortLinks, postLongLink.PostLongLink(longLink.OriginalURL,
-			&URLstorage.StorageURLs, config.ReadyConfig.BaseURL))
-	}
+func PostBatch(req *http.Request) []uint8 {
+	var originalRequest []originalLink
+	var shortenResponse []shortLink
 
-	for i := range shortLinks {
-		var responseToJSON = shortLink{
-			Result: shortLinks[i],
-		}
-		responseBatch = append(responseBatch, responseToJSON)
-	}
-	resp, err := json.Marshal(responseBatch)
+	err := json.NewDecoder(req.Body).Decode(&originalRequest)
 	if err != nil {
-		logger.ErrorLogger("Fail during convertion to json: ", err)
+		logger.ErrorLogger("Failed to read json: ", err)
 	}
 
-	return resp
+	for i := range originalRequest {
+		shortenResponse = append(shortenResponse,
+			shortLink{
+				Result: postLongLink.PostLongLink(originalRequest[i].OriginalURL,
+					&URLstorage.StorageURLs, config.ReadyConfig.BaseURL),
+				CorrelationId: originalRequest[i].CorrelationId,
+			})
+	}
+	response, err := json.Marshal(shortenResponse)
+	if err != nil {
+		logger.ErrorLogger("Failed to marshal json: ", err)
+	}
+	return response
 }

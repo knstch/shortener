@@ -66,13 +66,9 @@ func postURLJSON(res http.ResponseWriter, req *http.Request) {
 }
 
 func postBatch(res http.ResponseWriter, req *http.Request) {
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		logger.ErrorLogger("Can't read body: ", err)
-	}
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(201)
-	res.Write([]byte(batchRequest.PostBatch(body)))
+	res.Write([]byte(batchRequest.PostBatch(req)))
 }
 
 // Проверяем соединение с базой данных

@@ -21,7 +21,7 @@ func InitDB(dsn string) error {
 	if err != nil {
 		return err
 	}
-	initialization := `CREATE TABLE IF NOT EXISTS shorten_URLs(long_link text, short_link text);`
+	initialization := `CREATE TABLE IF NOT EXISTS shorten_URLs(long_link text, short_link text, correlation_id);`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
