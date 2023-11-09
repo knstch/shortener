@@ -1,6 +1,7 @@
 package urlstorage
 
 import (
+	"database/sql"
 	"encoding/json"
 	"math/rand"
 	"os"
@@ -11,6 +12,7 @@ import (
 	checkDuplicate "github.com/knstch/shortener/internal/app/DB/checkDuplicate"
 	findData "github.com/knstch/shortener/internal/app/DB/findData"
 	insertData "github.com/knstch/shortener/internal/app/DB/insertData"
+	logger "github.com/knstch/shortener/internal/app/logger"
 )
 
 type (
@@ -65,7 +67,11 @@ func (storage Storage) FindLink(url string) (string, error) {
 	storage.Mu.Lock()
 	defer storage.Mu.Unlock()
 	if config.ReadyConfig.DSN != "" {
-		return findData.FindData(config.ReadyConfig.DSN, url)
+		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+		if err != nil {
+			logger.ErrorLogger("Can't open connection: ", err)
+		}
+		return findData.FindData(config.ReadyConfig.DSN, url, db)
 	} else {
 		value, ok := storage.Data[url]
 		if !ok {
@@ -75,21 +81,27 @@ func (storage Storage) FindLink(url string) (string, error) {
 	}
 }
 
-// Запись ссылки в базу данных или json хранилище. Если идет запись дубликата в БД,
+// Запись ссылки в базу данных, json хранилище или in-memory. Если идет запись дубликата в БД,
 // возвращается уже существующая ссылка
-func (storage *Storage) PostLink(reqBody string, URLaddr string) string {
+func (storage *Storage) PostLink(longLink string, URLaddr string) string {
 	if config.ReadyConfig.DSN != "" {
-		if !checkDuplicate.CheckDuplicate(config.ReadyConfig.DSN, reqBody) {
+		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+		if err != nil {
+			logger.ErrorLogger("Can't open connection: ", err)
+		}
+		defer db.Close()
+		if !checkDuplicate.CheckDuplicate(config.ReadyConfig.DSN, longLink, db) {
 			shortenLink := shortLinkGenerator(5)
-			insertData.InsertData(config.ReadyConfig.DSN, shortenLink, reqBody)
+			insertData.InsertData(config.ReadyConfig.DSN, shortenLink, longLink, db)
 			return URLaddr + "/" + shortenLink
 		}
-		return URLaddr + "/" + checkDuplicate.FindShortLink(config.ReadyConfig.DSN, reqBody)
+
+		return URLaddr + "/" + checkDuplicate.FindShortLink(config.ReadyConfig.DSN, longLink, db)
 	} else {
 		storage.Mu.Lock()
 		defer storage.Mu.Unlock()
 		storage.Counter++
-		storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = reqBody
+		storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = longLink
 		storage.Save(config.ReadyConfig.FileStorage)
 		return URLaddr + "/shortenLink" + strconv.Itoa(storage.Counter)
 	}

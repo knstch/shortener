@@ -16,6 +16,7 @@ import (
 
 	DBConnect "github.com/knstch/shortener/internal/app/DB/DBConnect"
 	initDB "github.com/knstch/shortener/internal/app/DB/initDB"
+	batchRequest "github.com/knstch/shortener/internal/app/api/batchRequest"
 	postLongLinkJSON "github.com/knstch/shortener/internal/app/api/postLongLinkJSON"
 	logger "github.com/knstch/shortener/internal/app/logger"
 	gzipCompressor "github.com/knstch/shortener/internal/app/middleware/gzipCompressor"
@@ -64,6 +65,16 @@ func postURLJSON(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte(postLongLinkJSON.PostLongLinkJSON(body)))
 }
 
+func postBatch(res http.ResponseWriter, req *http.Request) {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		logger.ErrorLogger("Can't read body: ", err)
+	}
+	res.Header().Set("Content-Type", "text/plain")
+	res.WriteHeader(http.StatusOK)
+	res.Write([]byte(batchRequest.PostBatch(body)))
+}
+
 // Проверяем соединение с базой данных
 func pingDB(res http.ResponseWriter, req *http.Request) {
 	if err := DBConnect.OpenConnection(config.ReadyConfig.DSN); err != nil {
@@ -84,6 +95,7 @@ func RequestsRouter() chi.Router {
 	router.Post("/", postURL)
 	router.Post("/api/shorten", postURLJSON)
 	router.Get("/ping", pingDB)
+	router.Post("/api/shorten/batch", postBatch)
 	return router
 }
 
