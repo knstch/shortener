@@ -11,8 +11,8 @@ import (
 )
 
 type originalLink struct {
-	OriginalURL   string `json:"original_url"`
-	CorrelationId string `json:"correlation_id"`
+	OriginalURL    string `json:"original_url"`
+	CorrelationIdD string `json:"correlation_id"`
 }
 
 type shortLink struct {
@@ -34,7 +34,7 @@ func PostBatch(req *http.Request) []uint8 {
 			shortLink{
 				Result: postLongLink.PostLongLink(originalRequest[i].OriginalURL,
 					&URLstorage.StorageURLs, config.ReadyConfig.BaseURL),
-				CorrelationId: originalRequest[i].CorrelationId,
+				CorrelationId: originalRequest[i].CorrelationIdD,
 			})
 	}
 	response, err := json.Marshal(shortenResponse)
