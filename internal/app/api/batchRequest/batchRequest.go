@@ -34,7 +34,7 @@ func PostBatch(req *http.Request) []uint8 {
 			shortLink{
 				Result: postLongLink.PostLongLink(originalRequest[i].OriginalURL,
 					&URLstorage.StorageURLs, config.ReadyConfig.BaseURL),
-				CorrelationId: originalRequest[i].CorrelationId,
+				CorrelationID: originalRequest[i].CorrelationID,
 			})
 	}
 	response, err := json.Marshal(shortenResponse)
