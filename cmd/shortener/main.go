@@ -49,9 +49,10 @@ func postURL(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		logger.ErrorLogger("Error during reading body: ", err)
 	}
+	returnedShortLink, statusCode := postLongLink.PostLongLink(string(body), &URLstorage.StorageURLs, config.ReadyConfig.BaseURL)
 	res.Header().Set("Content-Type", "text/plain")
-	res.WriteHeader(201)
-	res.Write([]byte(postLongLink.PostLongLink(string(body), &URLstorage.StorageURLs, config.ReadyConfig.BaseURL)))
+	res.WriteHeader(statusCode)
+	res.Write([]byte(returnedShortLink))
 }
 
 // Передаем json-объект и получаем в ответе короткий URL в виде json-объекта
@@ -60,9 +61,10 @@ func postURLJSON(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		logger.ErrorLogger("Error during opening body: ", err)
 	}
+	returnedJSONShortLink, statusCode := postLongLinkJSON.PostLongLinkJSON(body)
 	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(201)
-	res.Write([]byte(postLongLinkJSON.PostLongLinkJSON(body)))
+	res.WriteHeader(statusCode)
+	res.Write([]byte(returnedJSONShortLink))
 }
 
 func postBatch(res http.ResponseWriter, req *http.Request) {

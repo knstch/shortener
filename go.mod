@@ -19,6 +19,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-resty/resty/v2 v2.9.1
+	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.uber.org/zap v1.26.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect

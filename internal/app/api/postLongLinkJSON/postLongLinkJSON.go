@@ -20,10 +20,10 @@ type result struct {
 }
 
 // Функция принимает ссылку в json и отдает короткую в json
-func PostLongLinkJSON(req []byte) []uint8 {
+func PostLongLinkJSON(req []byte) ([]uint8, int) {
 	var longLink link
 	json.Unmarshal(req, &longLink)
-	shortenURL := postLongLink.PostLongLink(string(longLink.URL), &URLstorage.StorageURLs, config.ReadyConfig.BaseURL)
+	shortenURL, statusCode := postLongLink.PostLongLink(string(longLink.URL), &URLstorage.StorageURLs, config.ReadyConfig.BaseURL)
 	var resultJSON = result{
 		Result: shortenURL,
 	}
@@ -31,5 +31,5 @@ func PostLongLinkJSON(req []byte) []uint8 {
 	if err != nil {
 		logger.ErrorLogger("Fail during convertion to json: ", err)
 	}
-	return resp
+	return resp, statusCode
 }

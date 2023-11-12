@@ -35,7 +35,8 @@ func TestPostlonglinkjson(t *testing.T) {
 	}
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.JSONEq(t, string(PostLongLinkJSON([]byte(tests[i].request))), tests[i].want)
+			shortLink, _ := PostLongLinkJSON([]byte(tests[i].request))
+			assert.JSONEq(t, string(shortLink), tests[i].want)
 		})
 	}
 }

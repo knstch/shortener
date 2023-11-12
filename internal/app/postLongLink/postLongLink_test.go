@@ -31,7 +31,8 @@ func TestPostLongLink(t *testing.T) {
 	}
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, PostLongLink(tests[i].request, &testStorage, "http://localhost:8080"), tests[i].want)
+			shortLink, _ := PostLongLink(tests[i].request, &testStorage, "http://localhost:8080")
+			assert.Equal(t, shortLink, tests[i].want)
 		})
 	}
 }

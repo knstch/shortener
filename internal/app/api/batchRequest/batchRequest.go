@@ -30,10 +30,11 @@ func PostBatch(req *http.Request) []uint8 {
 	}
 
 	for i := range originalRequest {
+		returnedShortLink, _ := postLongLink.PostLongLink(originalRequest[i].OriginalURL,
+			&URLstorage.StorageURLs, config.ReadyConfig.BaseURL)
 		shortenResponse = append(shortenResponse,
 			shortLink{
-				Result: postLongLink.PostLongLink(originalRequest[i].OriginalURL,
-					&URLstorage.StorageURLs, config.ReadyConfig.BaseURL),
+				Result:        returnedShortLink,
 				CorrelationID: originalRequest[i].CorrelationID,
 			})
 	}
