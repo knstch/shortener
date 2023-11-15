@@ -3,133 +3,60 @@ package main
 import (
 	"context"
 	"database/sql"
-	"io"
 	"net/http"
 	"os"
 	"os/signal"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/knstch/shortener/internal/app/handler"
+	dbconnect "github.com/knstch/shortener/internal/app/storage/DBConnect"
+	"github.com/knstch/shortener/internal/app/storage/memory"
+	"github.com/knstch/shortener/internal/app/storage/psql"
 
-	config "github.com/knstch/shortener/cmd/config"
-	URLstorage "github.com/knstch/shortener/internal/app/storage"
-
-	getShortenLink "github.com/knstch/shortener/internal/app/getShortenLink"
-
-	DBConnect "github.com/knstch/shortener/internal/app/DB/DBConnect"
-	initDB "github.com/knstch/shortener/internal/app/DB/initDB"
-	batchRequest "github.com/knstch/shortener/internal/app/api/batchRequest"
-	postLongLinkJSON "github.com/knstch/shortener/internal/app/api/postLongLinkJSON"
-	logger "github.com/knstch/shortener/internal/app/logger"
+	"github.com/knstch/shortener/cmd/config"
+	"github.com/knstch/shortener/internal/app/logger"
 	gzipCompressor "github.com/knstch/shortener/internal/app/middleware/gzipCompressor"
 	loggerMiddleware "github.com/knstch/shortener/internal/app/middleware/loggerMiddleware"
-	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
 )
 
-type Storage interface {
-	GetShortenLink(url string) (string, error)
-	PostLongLink(reqBody string, URLaddr string) (string, int)
-}
-
-type Handler struct {
-	s Storage
-}
-
-func NewHandler(s Storage) *Handler {
-	return &Handler{s: s}
-}
-
-// Вызываем для передачи данных в функцию getURL
-// и написания ответа в зависимости от ответа getURL
-func getURL(res http.ResponseWriter, req *http.Request) {
-	url := chi.URLParam(req, "url")
-	if shortenURL, err := getShortenLink.GetShortenLink(url, URLstorage.StorageURLs); shortenURL != "" {
-		if err != nil {
-			logger.ErrorLogger("Can't find link: ", err)
-		}
-		res.Header().Set("Content-Type", "text/plain")
-		res.Header().Set("Location", shortenURL)
-		res.WriteHeader(307)
-		res.Write([]byte(shortenURL))
-	} else {
-		http.Error(res, "Bad Request", http.StatusBadRequest)
-	}
-}
-
-// Вызывается при использовании метода POST, передает данные
-// в функцию postURL для записи данных в хранилище и пишет
-// ответ сервера, когда все записано
-func postURL(res http.ResponseWriter, req *http.Request) {
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		logger.ErrorLogger("Error during reading body: ", err)
-	}
-	returnedShortLink, statusCode := postLongLink.PostLongLink(string(body), &storage.StorageURLs, config.ReadyConfig.BaseURL)
-	res.Header().Set("Content-Type", "text/plain")
-	res.WriteHeader(statusCode)
-	res.Write([]byte(returnedShortLink))
-}
-
-// Передаем json-объект и получаем в ответе короткий URL в виде json-объекта
-func postURLJSON(res http.ResponseWriter, req *http.Request) {
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		logger.ErrorLogger("Error during opening body: ", err)
-	}
-	returnedJSONShortLink, statusCode := postLongLinkJSON.PostLongLinkJSON(body)
-	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(statusCode)
-	res.Write([]byte(returnedJSONShortLink))
-}
-
-func postBatch(res http.ResponseWriter, req *http.Request) {
-	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(201)
-	res.Write([]byte(batchRequest.PostBatch(req)))
-}
-
-// Проверяем соединение с базой данных
-func pingDB(res http.ResponseWriter, req *http.Request) {
-	if err := DBConnect.OpenConnection(config.ReadyConfig.DSN); err != nil {
-		http.Error(res, "Can't connect to DB", http.StatusInternalServerError)
-	} else {
-		res.Header().Set("Content-Type", "text/plain")
-		res.WriteHeader(http.StatusOK)
-		res.Write([]byte("Connection is set"))
-	}
-}
-
 // Роутер запросов
-func RequestsRouter() chi.Router {
+func RequestsRouter(h *handler.Handler) chi.Router {
 	router := chi.NewRouter()
 	router.Use(gzipCompressor.GzipMiddleware)
 	router.Use(loggerMiddleware.RequestsLogger)
-	router.Get("/{url}", getURL)
-	router.Post("/", postURL)
-	router.Post("/api/shorten", postURLJSON)
-	router.Get("/ping", pingDB)
-	router.Post("/api/shorten/batch", postBatch)
+	router.Get("/{url}", h.GetURL)
+	router.Post("/", h.PostURL)
+	router.Post("/api/shorten", h.PostURLJSON)
+	router.Get("/ping", h.PingDB)
+	router.Post("/api/shorten/batch", h.PostBatch)
 	return router
 }
 
 func main() {
 	config.ParseConfig()
 	// storage.StorageURLs.Load(config.ReadyConfig.FileStorage)
-	var storage Storage
+	var storage handler.Storage
+	var ping handler.PingChecker
 	if config.ReadyConfig.DSN != "" {
-		initDB.InitDB(config.ReadyConfig.DSN)
 		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+		if err != nil {
+
+		}
+		err = psql.InitDB(db)
 		if err != nil {
 			// ..
 		}
-		storage := URLstorage.NewPsqlStorage(db)
+		storage = psql.NewPsqlStorage(db)
+		ping = dbconnect.NewDBConnection(db)
 	} else {
-		storage := URLstorage.NewMemStorage()
+		storage = memory.NewMemStorage()
 	}
-	h := NewHandler(storage)
+
+	h := handler.NewHandler(storage, ping)
 
 	srv := http.Server{
 		Addr:    config.ReadyConfig.ServerAddr,
-		Handler: RequestsRouter(),
+		Handler: RequestsRouter(h),
 	}
 
 	idleConnsClosed := make(chan struct{})

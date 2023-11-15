@@ -1,12 +1,13 @@
-package storage
+package memory
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"strconv"
 	"sync"
 
-	config "github.com/knstch/shortener/cmd/config"
+	"github.com/knstch/shortener/cmd/config"
 )
 
 type MemStorage struct {
@@ -47,7 +48,7 @@ func (storage *MemStorage) Load(fname string) error {
 }
 
 // Ищем ссылку
-func (storage MemStorage) FindLink(url string) (string, error) {
+func (storage *MemStorage) FindLink(url string) (string, error) {
 	value, ok := storage.Data[url]
 	if !ok {
 		return "", nil
@@ -57,11 +58,11 @@ func (storage MemStorage) FindLink(url string) (string, error) {
 
 // Запись ссылки в базу данных, json хранилище или in-memory. Если идет запись дубликата в БД,
 // возвращается уже существующая ссылка
-func (storage *MemStorage) PostLink(longLink string, URLaddr string) (string, int) {
+func (storage *MemStorage) PostLink(_ context.Context, longLink string, URLaddr string) (string, error) {
 	storage.Mu.Lock()
 	defer storage.Mu.Unlock()
 	storage.Counter++
 	storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = longLink
 	storage.Save(config.ReadyConfig.FileStorage)
-	return URLaddr + "/shortenLink" + strconv.Itoa(storage.Counter), 201
+	return URLaddr + "/shortenLink" + strconv.Itoa(storage.Counter), nil
 }
