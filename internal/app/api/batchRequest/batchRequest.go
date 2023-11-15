@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	config "github.com/knstch/shortener/cmd/config"
-	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
 	logger "github.com/knstch/shortener/internal/app/logger"
 	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
+	storage "github.com/knstch/shortener/internal/app/storage"
 )
 
 type originalLink struct {
@@ -31,7 +31,7 @@ func PostBatch(req *http.Request) []uint8 {
 
 	for i := range originalRequest {
 		returnedShortLink, _ := postLongLink.PostLongLink(originalRequest[i].OriginalURL,
-			&URLstorage.StorageURLs, config.ReadyConfig.BaseURL)
+			&storage.StorageURLs, config.ReadyConfig.BaseURL)
 		shortenResponse = append(shortenResponse,
 			shortLink{
 				Result:        returnedShortLink,

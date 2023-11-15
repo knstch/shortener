@@ -25,7 +25,7 @@ func TestPostLongLink(t *testing.T) {
 			request: "https://practicum.yandex.ru/2",
 		},
 	}
-	var testStorage = URLstorage.Storage{
+	var testStorage = URLstorage.MemStorage{
 		Data: make(map[string]string),
 		Mu:   &sync.Mutex{},
 	}

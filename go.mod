@@ -17,6 +17,7 @@ require (
 require (
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/go-chi/chi v1.5.5
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-resty/resty/v2 v2.9.1
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa

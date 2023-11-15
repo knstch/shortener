@@ -10,7 +10,7 @@ import (
 
 func TestGetShortenLink(t *testing.T) {
 
-	var testStorage = URLstorage.Storage{
+	var testStorage = URLstorage.MemStorage{
 		Data: make(map[string]string),
 		Mu:   &sync.Mutex{},
 	}

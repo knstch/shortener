@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"io"
 	"net/http"
 	"os"
@@ -10,7 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	config "github.com/knstch/shortener/cmd/config"
-	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
+	URLstorage "github.com/knstch/shortener/internal/app/storage"
 
 	getShortenLink "github.com/knstch/shortener/internal/app/getShortenLink"
 
@@ -23,6 +24,19 @@ import (
 	loggerMiddleware "github.com/knstch/shortener/internal/app/middleware/loggerMiddleware"
 	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
 )
+
+type Storage interface {
+	GetShortenLink(url string) (string, error)
+	PostLongLink(reqBody string, URLaddr string) (string, int)
+}
+
+type Handler struct {
+	s Storage
+}
+
+func NewHandler(s Storage) *Handler {
+	return &Handler{s: s}
+}
 
 // Вызываем для передачи данных в функцию getURL
 // и написания ответа в зависимости от ответа getURL
@@ -49,7 +63,7 @@ func postURL(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		logger.ErrorLogger("Error during reading body: ", err)
 	}
-	returnedShortLink, statusCode := postLongLink.PostLongLink(string(body), &URLstorage.StorageURLs, config.ReadyConfig.BaseURL)
+	returnedShortLink, statusCode := postLongLink.PostLongLink(string(body), &storage.StorageURLs, config.ReadyConfig.BaseURL)
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(statusCode)
 	res.Write([]byte(returnedShortLink))
@@ -99,10 +113,20 @@ func RequestsRouter() chi.Router {
 
 func main() {
 	config.ParseConfig()
-	URLstorage.StorageURLs.Load(config.ReadyConfig.FileStorage)
+	// storage.StorageURLs.Load(config.ReadyConfig.FileStorage)
+	var storage Storage
 	if config.ReadyConfig.DSN != "" {
 		initDB.InitDB(config.ReadyConfig.DSN)
+		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+		if err != nil {
+			// ..
+		}
+		storage := URLstorage.NewPsqlStorage(db)
+	} else {
+		storage := URLstorage.NewMemStorage()
 	}
+	h := NewHandler(storage)
+
 	srv := http.Server{
 		Addr:    config.ReadyConfig.ServerAddr,
 		Handler: RequestsRouter(),
