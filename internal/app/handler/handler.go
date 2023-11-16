@@ -56,7 +56,7 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 		logger.ErrorLogger("Fail during convertion to json: ", err)
 	}
 	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(307)
+	res.WriteHeader(201)
 	res.Write(resp)
 }
 
