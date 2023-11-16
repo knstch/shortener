@@ -24,7 +24,7 @@ func NewMemStorage() *MemStorage {
 }
 
 // Сохраняем данные в файл
-func (storage *MemStorage) Save(fname string) error {
+func (storage *MemStorage) save(fname string) error {
 	data, err := json.MarshalIndent(storage, "", "   ")
 	if err != nil {
 		return err
@@ -36,7 +36,7 @@ func (storage *MemStorage) Save(fname string) error {
 }
 
 // Загружаем данные из файла
-func (storage *MemStorage) Load(fname string) error {
+func (storage *MemStorage) load(fname string) error {
 	data, err := os.ReadFile(fname)
 	if err != nil {
 		return err
@@ -49,6 +49,7 @@ func (storage *MemStorage) Load(fname string) error {
 
 // Ищем ссылку
 func (storage MemStorage) FindLink(url string) (string, error) {
+	storage.load(config.ReadyConfig.FileStorage)
 	value, ok := storage.Data[url]
 	if !ok {
 		return "", nil
@@ -63,6 +64,6 @@ func (storage *MemStorage) PostLink(_ context.Context, longLink string, URLaddr 
 	defer storage.Mu.Unlock()
 	storage.Counter++
 	storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = longLink
-	storage.Save(config.ReadyConfig.FileStorage)
+	storage.save(config.ReadyConfig.FileStorage)
 	return URLaddr + "/shortenLink" + strconv.Itoa(storage.Counter), nil
 }

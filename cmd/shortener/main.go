@@ -34,7 +34,6 @@ func RequestsRouter(h *handler.Handler) chi.Router {
 
 func main() {
 	config.ParseConfig()
-	// storage.StorageURLs.Load(config.ReadyConfig.FileStorage)
 	var storage handler.Storage
 	var ping handler.PingChecker
 	if config.ReadyConfig.DSN != "" {
