@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"time"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -42,9 +41,6 @@ func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string) 
 		logger.ErrorLogger("Can't make a transaction: ", err)
 		return "", err
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
 	preparedRequest, err := storage.db.PrepareContext(ctx, "INSERT INTO shorten_URLs(short_link, long_link) VALUES ($1, $2);")
 	if err != nil {
