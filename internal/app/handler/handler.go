@@ -56,10 +56,7 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	var resultJSON = result{
 		Result: shortenURL,
 	}
-	resp, err := json.Marshal(resultJSON)
-	if err != nil {
-		logger.ErrorLogger("Fail during convertion to json: ", err)
-	}
+	resp, _ := json.Marshal(resultJSON)
 	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
 		res.Header().Set("Content-Type", "application/json")
 		res.WriteHeader(409)
