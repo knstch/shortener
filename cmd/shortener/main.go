@@ -40,7 +40,7 @@ func main() {
 	if config.ReadyConfig.DSN != "" {
 		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
 		if err != nil {
-
+			logger.ErrorLogger("Can't open connection: ", err)
 		}
 		err = psql.InitDB(db)
 		if err != nil {
