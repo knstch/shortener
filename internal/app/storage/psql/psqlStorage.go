@@ -58,17 +58,6 @@ func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string) 
 		return shortLink, nil
 	}
 
-	createIndex, err := storage.db.PrepareContext(ctx, "CREATE INDEX long_link ON shorten_urls (long_link)")
-	if err != nil {
-		logger.ErrorLogger("Can't create indexes: ", err)
-		return "", err
-	}
-	_, err = createIndex.ExecContext(ctx)
-	if err != nil {
-		tx.Rollback()
-		return "", err
-	}
-
 	tx.Commit()
 
 	return generatedShortLink, nil
