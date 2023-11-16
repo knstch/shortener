@@ -55,7 +55,7 @@ func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string) 
 	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
 		shortLink := storage.findShortLink(longLink)
 		tx.Rollback()
-		return shortLink, nil
+		return shortLink, err
 	}
 
 	tx.Commit()

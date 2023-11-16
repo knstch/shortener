@@ -2,14 +2,19 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	config "github.com/knstch/shortener/cmd/config"
 	logger "github.com/knstch/shortener/internal/app/logger"
 )
+
+var pgErr *pgconn.PgError
 
 func NewHandler(s Storage, p PingChecker) *Handler {
 	return &Handler{s: s, p: p}
@@ -24,7 +29,12 @@ func (h *Handler) PostURL(res http.ResponseWriter, req *http.Request) {
 		logger.ErrorLogger("Error during reading body: ", err)
 	}
 	returnedShortLink, err := h.s.PostLink(req.Context(), string(body), config.ReadyConfig.BaseURL)
-	if err != nil {
+	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+		res.Header().Set("Content-Type", "text/plain")
+		res.WriteHeader(409)
+		res.Write([]byte(returnedShortLink))
+		return
+	} else if err != nil {
 		logger.ErrorLogger("Error posing link: ", err)
 		res.WriteHeader(http.StatusInternalServerError)
 		return
@@ -43,17 +53,22 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	var longLink link
 	json.Unmarshal(body, &longLink)
 	shortenURL, err := h.s.PostLink(req.Context(), longLink.URL, config.ReadyConfig.BaseURL)
-	if err != nil {
-		logger.ErrorLogger("Error posing link: ", err)
-		res.WriteHeader(http.StatusInternalServerError)
-		return
-	}
 	var resultJSON = result{
 		Result: shortenURL,
 	}
 	resp, err := json.Marshal(resultJSON)
 	if err != nil {
 		logger.ErrorLogger("Fail during convertion to json: ", err)
+	}
+	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+		res.Header().Set("Content-Type", "application/json")
+		res.WriteHeader(409)
+		res.Write([]byte(resp))
+		return
+	} else if err != nil {
+		logger.ErrorLogger("Error posing link: ", err)
+		res.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(201)
@@ -71,9 +86,15 @@ func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 
 	for i := range originalRequest {
 		returnedShortLink, err := h.s.PostLink(req.Context(), originalRequest[i].OriginalURL, config.ReadyConfig.BaseURL)
-		if err != nil {
-			logger.ErrorLogger("Error posting data: ", err)
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+			res.Header().Set("Content-Type", "text/plain")
+			res.WriteHeader(409)
+			res.Write([]byte(returnedShortLink))
+			return
+		} else if err != nil {
+			logger.ErrorLogger("Error posing link: ", err)
 			res.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		shortenResponse = append(shortenResponse,
 			shortLink{
