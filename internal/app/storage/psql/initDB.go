@@ -1,4 +1,4 @@
-package initdb
+package psql
 
 import (
 	"context"
@@ -6,16 +6,11 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	config "github.com/knstch/shortener/cmd/config"
 	logger "github.com/knstch/shortener/internal/app/logger"
 )
 
 // Инициализация таблицы shorten_URLs с полями long_link text и short_link text
-func InitDB(dsn string) error {
-	db, err := sql.Open("pgx", config.ReadyConfig.DSN)
-	if err != nil {
-		logger.ErrorLogger("Can't open connection: ", err)
-	}
+func InitDB(db *sql.DB) error {
 
 	tx, err := db.Begin()
 	if err != nil {
