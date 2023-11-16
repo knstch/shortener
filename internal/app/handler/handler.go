@@ -57,15 +57,15 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 		Result: shortenURL,
 	}
 	resp, _ := json.Marshal(resultJSON)
+	fmt.Printf("Shorten duplicate: %v\n", shortenURL)
 	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
 		res.Header().Set("Content-Type", "application/json")
 		res.WriteHeader(409)
 		res.Write([]byte(resp))
 		return
 	} else if err != nil {
-		logger.ErrorLogger("Error posing link: ", err)
+		logger.ErrorLogger("Error posting link: %v\n", err)
 		res.WriteHeader(http.StatusInternalServerError)
-		return
 	}
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(201)

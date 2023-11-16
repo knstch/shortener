@@ -67,7 +67,7 @@ func (storage *PsqURLlStorage) PostLink(ctx context.Context, longLink string, UR
 	shortenLink, err := storage.insertData(ctx, longLink)
 	if err != nil {
 		logger.ErrorLogger("Have an error inserting data in PostLink: ", err)
-		return "", err
+		return URLaddr + "/" + shortenLink, err
 	}
 	return URLaddr + "/" + shortenLink, nil
 }
