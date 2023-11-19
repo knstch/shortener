@@ -2,80 +2,59 @@ package main
 
 import (
 	"context"
-	"io"
+	"database/sql"
 	"net/http"
 	"os"
 	"os/signal"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/knstch/shortener/internal/app/handler"
+	dbconnect "github.com/knstch/shortener/internal/app/storage/DBConnect"
+	memory "github.com/knstch/shortener/internal/app/storage/memory"
+	"github.com/knstch/shortener/internal/app/storage/psql"
 
-	config "github.com/knstch/shortener/cmd/config"
-	URLstorage "github.com/knstch/shortener/internal/app/URLstorage"
-
-	getShortenLink "github.com/knstch/shortener/internal/app/getShortenLink"
-
-	postLongLinkJSON "github.com/knstch/shortener/internal/app/api/postLongLinkJSON"
-	errorLogger "github.com/knstch/shortener/internal/app/errorLogger"
+	"github.com/knstch/shortener/cmd/config"
+	"github.com/knstch/shortener/internal/app/logger"
 	gzipCompressor "github.com/knstch/shortener/internal/app/middleware/gzipCompressor"
-	logger "github.com/knstch/shortener/internal/app/middleware/loggerMiddleware"
-	postLongLink "github.com/knstch/shortener/internal/app/postLongLink"
+	loggerMiddleware "github.com/knstch/shortener/internal/app/middleware/loggerMiddleware"
 )
 
-// Вызываем для передачи данных в функцию getURL
-// и написания ответа в зависимости от ответа getURL
-func getURL(res http.ResponseWriter, req *http.Request) {
-	url := chi.URLParam(req, "url")
-	if shortenURL := getShortenLink.GetShortenLink(url, URLstorage.StorageURLs); shortenURL != "" {
-		res.Header().Set("Content-Type", "text/plain")
-		res.Header().Set("Location", shortenURL)
-		res.WriteHeader(307)
-		res.Write([]byte(shortenURL))
-	} else {
-		http.Error(res, "Bad Request", http.StatusBadRequest)
-	}
-}
-
-// Вызывается при использовании метода POST, передает данные
-// в функцию postURL для записи данных в хранилище и пишет
-// ответ сервера, когда все записано
-func postURL(res http.ResponseWriter, req *http.Request) {
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		errorLogger.ErrorLogger("Error during reading body: ", err)
-	}
-	res.Header().Set("Content-Type", "text/plain")
-	res.WriteHeader(201)
-	res.Write([]byte(postLongLink.PostLongLink(string(body), &URLstorage.StorageURLs, config.ReadyConfig.BaseURL)))
-}
-
-// Передаем json-объект и получаем в ответе короткий URL в виде json-объекта
-func postURLJSON(res http.ResponseWriter, req *http.Request) {
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		errorLogger.ErrorLogger("Error during opening body: ", err)
-	}
-	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(201)
-	res.Write([]byte(postLongLinkJSON.PostLongLinkJSON(body)))
-}
-
 // Роутер запросов
-func RequestsRouter() chi.Router {
+func RequestsRouter(h *handler.Handler) chi.Router {
 	router := chi.NewRouter()
 	router.Use(gzipCompressor.GzipMiddleware)
-	router.Use(logger.RequestsLogger)
-	router.Get("/{url}", getURL)
-	router.Post("/", postURL)
-	router.Post("/api/shorten", postURLJSON)
+	router.Use(loggerMiddleware.RequestsLogger)
+	router.Get("/{url}", h.GetURL)
+	router.Post("/", h.PostURL)
+	router.Post("/api/shorten", h.PostLongLinkJSON)
+	router.Get("/ping", h.PingDB)
+	router.Post("/api/shorten/batch", h.PostBatch)
 	return router
 }
 
 func main() {
 	config.ParseConfig()
-	URLstorage.StorageURLs.Load(config.ReadyConfig.FileStorage)
+	var storage handler.Storage
+	var ping handler.PingChecker
+	if config.ReadyConfig.DSN != "" {
+		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+		if err != nil {
+			logger.ErrorLogger("Can't open connection: ", err)
+		}
+		err = psql.InitDB(db)
+		if err != nil {
+			logger.ErrorLogger("Can't init DB: ", err)
+		}
+		storage = psql.NewPsqlStorage(db)
+		ping = dbconnect.NewDBConnection(db)
+	} else {
+		storage = memory.NewMemStorage()
+	}
+	h := handler.NewHandler(storage, ping)
+
 	srv := http.Server{
 		Addr:    config.ReadyConfig.ServerAddr,
-		Handler: RequestsRouter(),
+		Handler: RequestsRouter(h),
 	}
 
 	idleConnsClosed := make(chan struct{})
@@ -85,12 +64,12 @@ func main() {
 		<-sigint
 
 		if err := srv.Shutdown(context.Background()); err != nil {
-			errorLogger.ErrorLogger("Shutdown error", err)
+			logger.ErrorLogger("Shutdown error", err)
 		}
 		close(idleConnsClosed)
 	}()
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		errorLogger.ErrorLogger("Run error", err)
+		logger.ErrorLogger("Run error", err)
 	}
 	<-idleConnsClosed
 }
