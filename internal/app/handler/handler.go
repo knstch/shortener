@@ -177,7 +177,7 @@ func (h *Handler) GetUserLinks(res http.ResponseWriter, req *http.Request) {
 			res.WriteHeader(204)
 			res.Write([]byte("No content"))
 		} else {
-			res.WriteHeader(201)
+			res.WriteHeader(200)
 			res.Write(userURLs)
 		}
 	}
