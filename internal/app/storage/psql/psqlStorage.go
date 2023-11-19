@@ -3,6 +3,7 @@ package psql
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 
 	"github.com/jackc/pgerrcode"
@@ -32,7 +33,7 @@ func (storage *PsqURLlStorage) findShortLink(longLink string) string {
 }
 
 // Запись данных в БД
-func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string) (string, error) {
+func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string, UserID int) (string, error) {
 
 	generatedShortLink := shortLinkGenerator(5)
 
@@ -42,7 +43,7 @@ func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string) 
 		return "", err
 	}
 
-	preparedRequest, err := storage.db.PrepareContext(ctx, "INSERT INTO shorten_URLs(short_link, long_link) VALUES ($1, $2);")
+	preparedRequest, err := storage.db.PrepareContext(ctx, "INSERT INTO shorten_URLs(short_link, long_link, user_id) VALUES ($1, $2, $3);")
 	if err != nil {
 		logger.ErrorLogger("Can't prepare request: ", err)
 		return "", err
@@ -51,7 +52,7 @@ func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string) 
 
 	var pgErr *pgconn.PgError
 
-	_, err = preparedRequest.ExecContext(ctx, generatedShortLink, longLink)
+	_, err = preparedRequest.ExecContext(ctx, generatedShortLink, longLink, UserID)
 	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
 		shortLink := storage.findShortLink(longLink)
 		tx.Rollback()
@@ -63,8 +64,8 @@ func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string) 
 	return generatedShortLink, nil
 }
 
-func (storage *PsqURLlStorage) PostLink(ctx context.Context, longLink string, URLaddr string) (string, error) {
-	shortenLink, err := storage.insertData(ctx, longLink)
+func (storage *PsqURLlStorage) PostLink(ctx context.Context, longLink string, URLaddr string, UserID int) (string, error) {
+	shortenLink, err := storage.insertData(ctx, longLink, UserID)
 	if err != nil {
 		logger.ErrorLogger("Have an error inserting data in PostLink: ", err)
 		return URLaddr + "/" + shortenLink, err
@@ -83,4 +84,40 @@ func (storage *PsqURLlStorage) FindLink(url string) (string, error) {
 		return "", err
 	}
 	return longLink, nil
+}
+
+type URLs struct {
+	LongLink  string `json:"original_url"`
+	ShortLink string `json:"short_url"`
+}
+
+func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error) {
+
+	var userIDs []URLs
+
+	allIDs, err := storage.db.QueryContext(ctx, "SELECT long_link, short_link from shorten_URLs WHERE user_id = $1", id)
+	if err != nil {
+		logger.ErrorLogger("Error getting batch data: ", err)
+		return nil, err
+	}
+
+	for allIDs.Next() {
+		var links URLs
+		err := allIDs.Scan(&links.LongLink, &links.ShortLink)
+		if err != nil {
+			logger.ErrorLogger("Error scanning data: ", err)
+			return nil, err
+		}
+		userIDs = append(userIDs, URLs{
+			LongLink:  links.LongLink,
+			ShortLink: URLaddr + "/" + links.ShortLink,
+		})
+	}
+	jsonUserIDs, err := json.Marshal(userIDs)
+	if err != nil {
+		logger.ErrorLogger("Can't marshal IDs: ", err)
+		return nil, err
+	}
+
+	return jsonUserIDs, nil
 }

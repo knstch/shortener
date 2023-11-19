@@ -59,11 +59,15 @@ func (storage MemStorage) FindLink(url string) (string, error) {
 
 // Запись ссылки в базу данных, json хранилище или in-memory. Если идет запись дубликата в БД,
 // возвращается уже существующая ссылка
-func (storage *MemStorage) PostLink(_ context.Context, longLink string, URLaddr string) (string, error) {
+func (storage *MemStorage) PostLink(_ context.Context, longLink string, URLaddr string, _ int) (string, error) {
 	storage.Mu.Lock()
 	defer storage.Mu.Unlock()
 	storage.Counter++
 	storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = longLink
 	storage.save(config.ReadyConfig.FileStorage)
 	return URLaddr + "/shortenLink" + strconv.Itoa(storage.Counter), nil
+}
+
+func (storage *MemStorage) GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error) {
+	return []byte("Memory storage can't operate with user IDs"), nil
 }
