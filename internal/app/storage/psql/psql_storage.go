@@ -100,7 +100,10 @@ func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr 
 		logger.ErrorLogger("Error getting batch data: ", err)
 		return nil, err
 	}
-	defer allIDs.Close()
+	defer func() {
+		_ = allIDs.Close()
+		_ = allIDs.Err()
+	}()
 
 	for allIDs.Next() {
 		var links URLs
