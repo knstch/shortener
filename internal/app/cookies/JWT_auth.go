@@ -1,4 +1,4 @@
-package psql
+package cookies
 
 import (
 	"net/http"
@@ -7,11 +7,13 @@ import (
 	"math/rand"
 
 	"github.com/golang-jwt/jwt/v4"
+	config "github.com/knstch/shortener/cmd/config"
 	"github.com/knstch/shortener/internal/app/logger"
 )
 
-const SECRET_KEY = "aboba"
-const TOKEN_EXP = time.Hour * 3
+var secretKey = config.ReadyConfig.SecretKey
+
+const tokenExp = time.Hour * 3
 
 type Claims struct {
 	jwt.RegisteredClaims
@@ -26,11 +28,11 @@ func buildJWTString() (string, error) {
 	id := usedIDGenerator(1000)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TOKEN_EXP)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenExp)),
 		},
 		UserID: id,
 	})
-	tokenString, err := token.SignedString([]byte(SECRET_KEY))
+	tokenString, err := token.SignedString([]byte(secretKey))
 	if err != nil {
 		return "", err
 	}
@@ -47,7 +49,7 @@ func getUserID(tokenString string) int {
 			logger.ErrorLogger("unexpected signing method", nil)
 			return nil, nil
 		}
-		return []byte(SECRET_KEY), nil
+		return []byte(secretKey), nil
 	})
 	if err != nil {
 		return -1
