@@ -4,7 +4,8 @@ import "context"
 
 type Storage interface {
 	FindLink(url string) (string, error)
-	PostLink(ctx context.Context, longLink string, URLaddr string) (string, error)
+	PostLink(ctx context.Context, longLink string, URLaddr string, UserID int) (string, error)
+	GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error)
 }
 
 type PingChecker interface {

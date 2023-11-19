@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	config "github.com/knstch/shortener/cmd/config"
+	cookies "github.com/knstch/shortener/internal/app/cookies"
 	logger "github.com/knstch/shortener/internal/app/logger"
 )
 
@@ -28,7 +29,10 @@ func (h *Handler) PostURL(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		logger.ErrorLogger("Error during reading body: ", err)
 	}
-	returnedShortLink, err := h.s.PostLink(req.Context(), string(body), config.ReadyConfig.BaseURL)
+
+	UserID := cookies.CheckCookieForID(res, req)
+
+	returnedShortLink, err := h.s.PostLink(req.Context(), string(body), config.ReadyConfig.BaseURL, UserID)
 	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
 		res.Header().Set("Content-Type", "text/plain")
 		res.WriteHeader(409)
@@ -52,7 +56,10 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	}
 	var longLink link
 	json.Unmarshal(body, &longLink)
-	shortenURL, err := h.s.PostLink(req.Context(), longLink.URL, config.ReadyConfig.BaseURL)
+
+	UserID := cookies.CheckCookieForID(res, req)
+
+	shortenURL, err := h.s.PostLink(req.Context(), longLink.URL, config.ReadyConfig.BaseURL, UserID)
 	var resultJSON = result{
 		Result: shortenURL,
 	}
@@ -76,18 +83,20 @@ func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 	var originalRequest []originalLink
 	var shortenResponse []shortLink
 
+	statusCode := 201
+
 	err := json.NewDecoder(req.Body).Decode(&originalRequest)
 	if err != nil {
 		logger.ErrorLogger("Failed to read json: ", err)
 	}
 
+	UserID := cookies.CheckCookieForID(res, req)
+
 	for i := range originalRequest {
-		returnedShortLink, err := h.s.PostLink(req.Context(), originalRequest[i].OriginalURL, config.ReadyConfig.BaseURL)
+
+		returnedShortLink, err := h.s.PostLink(req.Context(), originalRequest[i].OriginalURL, config.ReadyConfig.BaseURL, UserID)
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			res.Header().Set("Content-Type", "text/plain")
-			res.WriteHeader(409)
-			res.Write([]byte(returnedShortLink))
-			return
+			statusCode = 409
 		} else if err != nil {
 			logger.ErrorLogger("Error posing link: ", err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -104,8 +113,9 @@ func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		logger.ErrorLogger("Failed to marshal json: ", err)
 	}
+
 	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(201)
+	res.WriteHeader(statusCode)
 	res.Write(response)
 }
 
@@ -114,7 +124,7 @@ func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 func (h *Handler) GetURL(res http.ResponseWriter, req *http.Request) {
 	url := req.URL.Path
 	url = strings.Trim(url, "/")
-	fmt.Printf("URL: %v\n", url)
+
 	shortenURL, err := h.s.FindLink(url)
 	if err != nil {
 		logger.ErrorLogger("Can't find link: ", err)
@@ -145,4 +155,30 @@ func (h *Handler) PingDB(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusOK)
 	res.Write([]byte("Connection is set"))
+}
+
+// Выдает ссылки по ID пользователя из кук
+func (h *Handler) GetUserLinks(res http.ResponseWriter, req *http.Request) {
+
+	userID := cookies.CheckCookieForID(res, req)
+
+	switch userID {
+	case -1:
+		res.WriteHeader(401)
+		res.Write([]byte("Unauthorized"))
+	default:
+		userURLs, err := h.s.GetURLsByID(req.Context(), userID, config.ReadyConfig.BaseURL)
+		if err != nil {
+			logger.ErrorLogger("Error getting URLs by ID", err)
+		}
+
+		res.Header().Set("Content-Type", "application/json")
+		if string(userURLs) == "null" {
+			res.WriteHeader(204)
+			res.Write([]byte("No content"))
+		} else {
+			res.WriteHeader(200)
+			res.Write(userURLs)
+		}
+	}
 }
