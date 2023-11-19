@@ -95,7 +95,7 @@ func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr 
 
 	var userIDs []URLs
 
-	allIDs, err := storage.db.QueryContext(ctx, "SELECT long_link, short_link from shorten_URLs WHERE user_id = $1", id)
+	allIDs, err := storage.db.QueryContext(ctx, "SELECT long_link, short_link from shorten_URLs WHERE user_id = $1;", id)
 	if err != nil {
 		logger.ErrorLogger("Error getting batch data: ", err)
 		return nil, err
