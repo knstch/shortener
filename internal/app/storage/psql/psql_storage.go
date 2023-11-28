@@ -159,7 +159,6 @@ func (storage *PsqURLlStorage) DeleteURLs(ctx context.Context, id int, shortURLs
 	inputCh := deleteURLsGenerator(contextFromDeleteURLs, doneCh, deleteURLs)
 
 	storage.fanOut(contextFromDeleteURLs, doneCh, inputCh)
-
 	// deleteResult := fanIn(doneCh, channels...)
 
 	// for err := range deleteResult {
@@ -222,7 +221,6 @@ func (storage *PsqURLlStorage) deleteWorker(ctx context.Context, doneCh chan str
 			}
 		}
 	}()
-
 	return nil
 }
 
