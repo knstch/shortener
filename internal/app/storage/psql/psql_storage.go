@@ -8,7 +8,6 @@ import (
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/knstch/shortener/cmd/config"
 	logger "github.com/knstch/shortener/internal/app/logger"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
@@ -205,38 +204,37 @@ func (storage *PsqURLlStorage) fanOut(ctx context.Context, doneCh chan struct{},
 }
 
 func (storage *PsqURLlStorage) deleteWorker(ctx context.Context, doneCh chan struct{}, inputCh chan URLToDelete) {
-	for link := range inputCh {
-		storage.deleteURL(ctx, link)
-	}
-}
+	tx, _ := storage.db.Begin()
 
-func (storage *PsqURLlStorage) deleteURL(ctx context.Context, URLToDelete URLToDelete) error {
-	dbLaunch, err := sql.Open("pgx", config.ReadyConfig.DSN)
-	if err != nil {
-		logger.ErrorLogger("Can't open connection: ", err)
-	}
-	defer dbLaunch.Close()
-	tx, err := dbLaunch.Begin()
-	if err != nil {
-		return err
-	}
 	defer tx.Rollback()
 
-	db := bun.NewDB(dbLaunch, pgdialect.New())
+	stmt, _ := tx.Prepare("UPDATE shorten_urls SET deleted = true WHERE user_id = $1 AND short_link = $2")
 
-	_, err = db.NewUpdate().
-		TableExpr("shorten_URLs").
-		Set("deleted = ?", "true").
-		Where("short_link = (?)", URLToDelete.shortLinks).
-		WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
-			return uq.Where("user_id = ?", URLToDelete.userID)
-		}).
-		Exec(ctx)
-	if err != nil {
-		logger.ErrorLogger("Can't exec update request: ", err)
+	defer stmt.Close()
+
+	for link := range inputCh {
+		storage.deleteURL(ctx, link, stmt)
 	}
 
-	err = tx.Commit()
+	tx.Commit()
+}
+
+func (storage *PsqURLlStorage) deleteURL(ctx context.Context, URLToDelete URLToDelete, stmt *sql.Stmt) error {
+
+	// db := bun.NewDB(storage.db, pgdialect.New())
+
+	// _, err := db.NewUpdate().
+	// 	TableExpr("shorten_URLs").
+	// 	Set("deleted = ?", "true").
+	// 	Where("short_link = (?)", URLToDelete.shortLinks).
+	// 	WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
+	// 		return uq.Where("user_id = ?", URLToDelete.userID)
+	// 	}).
+	// 	Exec(ctx)
+	// if err != nil {
+	// 	logger.ErrorLogger("Can't exec update request: ", err)
+	// }
+	_, err := stmt.ExecContext(ctx, URLToDelete.userID, URLToDelete.shortLinks)
 	if err != nil {
 		return err
 	}
