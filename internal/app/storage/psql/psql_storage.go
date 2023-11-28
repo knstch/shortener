@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/knstch/shortener/cmd/config"
 	logger "github.com/knstch/shortener/internal/app/logger"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
@@ -210,13 +211,18 @@ func (storage *PsqURLlStorage) deleteWorker(ctx context.Context, doneCh chan str
 }
 
 func (storage *PsqURLlStorage) deleteURL(ctx context.Context, URLToDelete URLToDelete) error {
+	dbLaunch, err := sql.Open("pgx", config.ReadyConfig.DSN)
+	if err != nil {
+		logger.ErrorLogger("Can't open connection: ", err)
+	}
+
 	tx, err := storage.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	db := bun.NewDB(storage.db, pgdialect.New())
+	db := bun.NewDB(dbLaunch, pgdialect.New())
 
 	_, err = db.NewUpdate().
 		TableExpr("shorten_URLs").
