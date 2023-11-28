@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"sync"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -154,13 +152,13 @@ func (storage *PsqURLlStorage) DeleteURLs(ctx context.Context, id int, shortURLs
 		}
 		deleteURLs = append(deleteURLs, URL)
 	}
-
+	contextFromDeleteURLs := context.Background()
 	doneCh := make(chan struct{})
 	defer close(doneCh)
 
-	inputCh := deleteURLsGenerator(ctx, doneCh, deleteURLs)
+	inputCh := deleteURLsGenerator(contextFromDeleteURLs, doneCh, deleteURLs)
 
-	storage.fanOut(ctx, doneCh, inputCh)
+	storage.fanOut(contextFromDeleteURLs, doneCh, inputCh)
 
 	// deleteResult := fanIn(doneCh, channels...)
 
@@ -193,7 +191,7 @@ func deleteURLsGenerator(ctx context.Context, doneCh chan struct{}, URLs []URLTo
 // fanOut принимает канал данных, порождает 5 горутин
 func (storage *PsqURLlStorage) fanOut(ctx context.Context, doneCh chan struct{}, inputCh chan URLToDelete) []chan error {
 	// количество горутин add
-	numWorkers := 5
+	numWorkers := 10
 	// каналы, в которые отправляются результаты
 	channels := make([]chan error, numWorkers)
 
@@ -257,32 +255,32 @@ func (storage *PsqURLlStorage) deleteURL(ctx context.Context, URLToDelete URLToD
 	return nil
 }
 
-func fanIn(doneCh chan struct{}, resultChs ...chan error) chan error {
-	errorsCh := make(chan error)
+// func fanIn(doneCh chan struct{}, resultChs ...chan error) chan error {
+// 	errorsCh := make(chan error)
 
-	var wg sync.WaitGroup
+// 	var wg sync.WaitGroup
 
-	for _, ch := range resultChs {
-		chCopy := ch
-		wg.Add(1)
+// 	for _, ch := range resultChs {
+// 		chCopy := ch
+// 		wg.Add(1)
 
-		go func() {
-			defer wg.Done()
-			fmt.Println("Aboba")
-			for data := range chCopy {
-				select {
-				case <-doneCh:
-					return
-				case errorsCh <- data:
-				}
-			}
-		}()
-	}
+// 		go func() {
+// 			defer wg.Done()
+// 			fmt.Println("Aboba")
+// 			for data := range chCopy {
+// 				select {
+// 				case <-doneCh:
+// 					return
+// 				case errorsCh <- data:
+// 				}
+// 			}
+// 		}()
+// 	}
 
-	go func() {
-		fmt.Println("Aboba 2")
-		wg.Wait()
-		close(errorsCh)
-	}()
-	return errorsCh
-}
+// 	go func() {
+// 		fmt.Println("Aboba 2")
+// 		wg.Wait()
+// 		close(errorsCh)
+// 	}()
+// 	return errorsCh
+// }
