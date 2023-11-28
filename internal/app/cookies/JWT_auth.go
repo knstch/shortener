@@ -20,12 +20,12 @@ type Claims struct {
 	UserID int
 }
 
-func usedIDGenerator(limit int) int {
+func userIDGenerator(limit int) int {
 	return rand.Intn(limit)
 }
 
 func buildJWTString() (string, error) {
-	id := usedIDGenerator(1000)
+	id := userIDGenerator(1000)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenExp)),
@@ -76,8 +76,10 @@ func CheckCookieForID(res http.ResponseWriter, req *http.Request) int {
 		http.SetCookie(res, &cookie)
 		id = getUserID(jwt)
 		return id
-	} else {
-		id = getUserID(userIDCookie.Value)
-		return id
 	}
+	id = getUserID(userIDCookie.Value)
+	return id
 }
+
+// 	SELECT * FROM shorten_urls
+// DROP TABLE shorten_urls

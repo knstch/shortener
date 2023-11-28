@@ -48,13 +48,13 @@ func (storage *MemStorage) load(fname string) error {
 }
 
 // Ищем ссылку
-func (storage MemStorage) FindLink(url string) (string, error) {
+func (storage MemStorage) FindLink(url string) (string, bool, error) {
 	storage.load(config.ReadyConfig.FileStorage)
 	value, ok := storage.Data[url]
 	if !ok {
-		return "", nil
+		return "", false, nil
 	}
-	return value, nil
+	return value, false, nil
 }
 
 // Запись ссылки в базу данных, json хранилище или in-memory. Если идет запись дубликата в БД,
@@ -70,4 +70,8 @@ func (storage *MemStorage) PostLink(_ context.Context, longLink string, URLaddr 
 
 func (storage *MemStorage) GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error) {
 	return []byte("Memory storage can't operate with user IDs"), nil
+}
+
+func (storage *MemStorage) DeleteURLs(ctx context.Context, id int, shortURLs []string) error {
+	return nil
 }

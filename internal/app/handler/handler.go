@@ -125,7 +125,7 @@ func (h *Handler) GetURL(res http.ResponseWriter, req *http.Request) {
 	url := req.URL.Path
 	url = strings.Trim(url, "/")
 
-	shortenURL, err := h.s.FindLink(url)
+	shortenURL, deleteStatus, err := h.s.FindLink(url)
 	if err != nil {
 		logger.ErrorLogger("Can't find link: ", err)
 		http.Error(res, "Bad Request", http.StatusInternalServerError)
@@ -134,6 +134,13 @@ func (h *Handler) GetURL(res http.ResponseWriter, req *http.Request) {
 
 	if shortenURL == "" {
 		http.Error(res, "Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	if deleteStatus {
+		res.Header().Set("Content-Type", "text/plain")
+		res.WriteHeader(410)
+		res.Write([]byte("Deleted URL"))
 		return
 	}
 
@@ -180,5 +187,27 @@ func (h *Handler) GetUserLinks(res http.ResponseWriter, req *http.Request) {
 			res.WriteHeader(200)
 			res.Write(userURLs)
 		}
+	}
+}
+
+func (h *Handler) DeleteLinks(res http.ResponseWriter, req *http.Request) {
+	userID := cookies.CheckCookieForID(res, req)
+
+	var URLs []string
+
+	err := json.NewDecoder(req.Body).Decode(&URLs)
+	if err != nil {
+		logger.ErrorLogger("Failed to read json: ", err)
+	}
+
+	switch userID {
+	case -1:
+		res.WriteHeader(401)
+		res.Write([]byte("You have no links to delete"))
+	default:
+		h.s.DeleteURLs(req.Context(), userID, URLs)
+		res.Header().Set("Content-Type", "text/plain")
+		res.WriteHeader(202)
+		res.Write([]byte("Deleted"))
 	}
 }

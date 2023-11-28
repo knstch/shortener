@@ -55,7 +55,7 @@ func TestFindLink(t *testing.T) {
 	}
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			longLink, _ := storage.FindLink(tests[i].request)
+			longLink, _, _ := storage.FindLink(tests[i].request)
 			assert.Equal(t, longLink, tests[i].want)
 		})
 	}
