@@ -231,18 +231,29 @@ func (storage *PsqURLlStorage) deleteURL(ctx context.Context, URLToDelete URLToD
 	}
 	defer tx.Rollback()
 
-	db := bun.NewDB(storage.db, pgdialect.New())
+	// db := bun.NewDB(storage.db, pgdialect.New())
 
-	_, err = db.NewUpdate().
-		TableExpr("shorten_URLs").
-		Set("deleted = ?", "true").
-		Where("short_link = (?)", URLToDelete.shortLinks).
-		WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
-			return uq.Where("user_id = ?", URLToDelete.userID)
-		}).
-		Exec(ctx)
+	// _, err = db.NewUpdate().
+	// 	TableExpr("shorten_URLs").
+	// 	Set("deleted = ?", "true").
+	// 	Where("short_link = (?)", URLToDelete.shortLinks).
+	// 	WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
+	// 		return uq.Where("user_id = ?", URLToDelete.userID)
+	// 	}).
+	// 	Exec(ctx)
+	// if err != nil {
+	// 	logger.ErrorLogger("Can't exec update request: ", err)
+	// }
+
+	preparedRequest, err := tx.Prepare("UPDATE shorten_urls SET deleted = true WHERE user_id = $1 AND short_link = $2")
 	if err != nil {
-		logger.ErrorLogger("Can't exec update request: ", err)
+		return err
+	}
+	defer preparedRequest.Close()
+
+	_, err = preparedRequest.ExecContext(ctx, URLToDelete.userID, URLToDelete.shortLinks)
+	if err != nil {
+		return err
 	}
 
 	err = tx.Commit()
