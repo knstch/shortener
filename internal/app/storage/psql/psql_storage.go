@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/jackc/pgerrcode"
@@ -137,22 +138,49 @@ func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr 
 	return jsonUserIDs, nil
 }
 
+type URLToDelete struct {
+	shortLinks string
+	userID     int
+}
+
 func (storage *PsqURLlStorage) DeleteURLs(ctx context.Context, id int, shortURLs []string) error {
 
-	inputCh := deleteURLsGenerator(ctx, shortURLs)
+	var deleteURLs []URLToDelete
 
-	storage.bulkDeleteStatusUpdate(id, inputCh)
+	for _, v := range shortURLs {
+		URL := URLToDelete{
+			shortLinks: v,
+			userID:     id,
+		}
+		deleteURLs = append(deleteURLs, URL)
+	}
+
+	doneCh := make(chan struct{})
+	defer close(doneCh)
+
+	inputCh := deleteURLsGenerator(ctx, doneCh, deleteURLs)
+
+	storage.fanOut(ctx, doneCh, inputCh)
+
+	// deleteResult := fanIn(doneCh, channels...)
+
+	// for err := range deleteResult {
+	// 	if err != nil {
+	// 		fmt.Println("Checking errors")
+	// 		logger.ErrorLogger("Error deleting URL: ", err)
+	// 	}
+	// }
 
 	return nil
 }
 
-func deleteURLsGenerator(ctx context.Context, URLs []string) chan string {
-	URLsCh := make(chan string)
+func deleteURLsGenerator(ctx context.Context, doneCh chan struct{}, URLs []URLToDelete) chan URLToDelete {
+	URLsCh := make(chan URLToDelete)
 	go func() {
 		defer close(URLsCh)
 		for _, data := range URLs {
 			select {
-			case <-ctx.Done():
+			case <-doneCh:
 				return
 			case URLsCh <- data:
 			}
@@ -162,37 +190,99 @@ func deleteURLsGenerator(ctx context.Context, URLs []string) chan string {
 	return URLsCh
 }
 
-func (storage *PsqURLlStorage) bulkDeleteStatusUpdate(id int, inputChs ...chan string) {
-	var wg sync.WaitGroup
+// fanOut принимает канал данных, порождает 5 горутин
+func (storage *PsqURLlStorage) fanOut(ctx context.Context, doneCh chan struct{}, inputCh chan URLToDelete) []chan error {
+	// количество горутин add
+	numWorkers := 5
+	// каналы, в которые отправляются результаты
+	channels := make([]chan error, numWorkers)
 
-	deleteUpdate := func(c chan string) {
-		var linksToDelete []string
-		for shortenLink := range c {
-			linksToDelete = append(linksToDelete, shortenLink)
-		}
-		db := bun.NewDB(storage.db, pgdialect.New())
-
-		_, err := db.NewUpdate().
-			TableExpr("shorten_URLs").
-			Set("deleted = ?", "true").
-			Where("short_link IN (?)", bun.In(linksToDelete)).
-			WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
-				return uq.Where("user_id = ?", id)
-			}).
-			Exec(context.Background())
-		if err != nil {
-			logger.ErrorLogger("Can't exec update request: ", err)
-		}
-		wg.Done()
+	for i := 0; i < numWorkers; i++ {
+		// получаем канал из горутины add
+		addResultCh := storage.deleteWorker(ctx, doneCh, inputCh)
+		// отправляем его в слайс каналов
+		channels[i] = addResultCh
 	}
 
-	wg.Add(len(inputChs))
+	// возвращаем слайс каналов
+	return channels
+}
 
-	for _, c := range inputChs {
-		go deleteUpdate(c)
+func (storage *PsqURLlStorage) deleteWorker(ctx context.Context, doneCh chan struct{}, inputCh chan URLToDelete) chan error {
+	deleteError := make(chan error)
+
+	go func() {
+		defer close(deleteError)
+
+		for link := range inputCh {
+			err := storage.deleteURL(ctx, link)
+
+			select {
+			case <-doneCh:
+				return
+			case deleteError <- err:
+			}
+		}
+	}()
+
+	return nil
+}
+
+func (storage *PsqURLlStorage) deleteURL(ctx context.Context, URLToDelete URLToDelete) error {
+	tx, err := storage.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	db := bun.NewDB(storage.db, pgdialect.New())
+
+	_, err = db.NewUpdate().
+		TableExpr("shorten_URLs").
+		Set("deleted = ?", "true").
+		Where("short_link = (?)", URLToDelete.shortLinks).
+		WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
+			return uq.Where("user_id = ?", URLToDelete.userID)
+		}).
+		Exec(ctx)
+	if err != nil {
+		logger.ErrorLogger("Can't exec update request: ", err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func fanIn(doneCh chan struct{}, resultChs ...chan error) chan error {
+	errorsCh := make(chan error)
+
+	var wg sync.WaitGroup
+
+	for _, ch := range resultChs {
+		chCopy := ch
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+			fmt.Println("Aboba")
+			for data := range chCopy {
+				select {
+				case <-doneCh:
+					return
+				case errorsCh <- data:
+				}
+			}
+		}()
 	}
 
 	go func() {
+		fmt.Println("Aboba 2")
 		wg.Wait()
+		close(errorsCh)
 	}()
+	return errorsCh
 }
