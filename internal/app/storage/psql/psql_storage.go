@@ -187,10 +187,10 @@ func deleteURLsGenerator(ctx context.Context, doneCh chan struct{}, URLs []URLTo
 	return URLsCh
 }
 
-// fanOut принимает канал данных, порождает 5 горутин
+// fanOut принимает канал данных, порождает 100 горутин
 func (storage *PsqURLlStorage) fanOut(ctx context.Context, doneCh chan struct{}, inputCh chan URLToDelete) []chan error {
 	// количество горутин add
-	numWorkers := 10
+	numWorkers := 100
 	// каналы, в которые отправляются результаты
 	channels := make([]chan error, numWorkers)
 
@@ -231,29 +231,18 @@ func (storage *PsqURLlStorage) deleteURL(ctx context.Context, URLToDelete URLToD
 	}
 	defer tx.Rollback()
 
-	// db := bun.NewDB(storage.db, pgdialect.New())
+	db := bun.NewDB(storage.db, pgdialect.New())
 
-	// _, err = db.NewUpdate().
-	// 	TableExpr("shorten_URLs").
-	// 	Set("deleted = ?", "true").
-	// 	Where("short_link = (?)", URLToDelete.shortLinks).
-	// 	WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
-	// 		return uq.Where("user_id = ?", URLToDelete.userID)
-	// 	}).
-	// 	Exec(ctx)
-	// if err != nil {
-	// 	logger.ErrorLogger("Can't exec update request: ", err)
-	// }
-
-	preparedRequest, err := tx.Prepare("UPDATE shorten_urls SET deleted = true WHERE user_id = $1 AND short_link = $2")
+	_, err = db.NewUpdate().
+		TableExpr("shorten_URLs").
+		Set("deleted = ?", "true").
+		Where("short_link = (?)", URLToDelete.shortLinks).
+		WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
+			return uq.Where("user_id = ?", URLToDelete.userID)
+		}).
+		Exec(ctx)
 	if err != nil {
-		return err
-	}
-	defer preparedRequest.Close()
-
-	_, err = preparedRequest.ExecContext(ctx, URLToDelete.userID, URLToDelete.shortLinks)
-	if err != nil {
-		return err
+		logger.ErrorLogger("Can't exec update request: ", err)
 	}
 
 	err = tx.Commit()
