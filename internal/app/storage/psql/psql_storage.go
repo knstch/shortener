@@ -196,32 +196,17 @@ func (storage *PsqURLlStorage) fanOut(ctx context.Context, doneCh chan struct{},
 
 	for i := 0; i < numWorkers; i++ {
 		// получаем канал из горутины add
-		addResultCh := storage.deleteWorker(ctx, doneCh, inputCh)
-		// отправляем его в слайс каналов
-		channels[i] = addResultCh
+		go storage.deleteWorker(ctx, doneCh, inputCh)
 	}
 
 	// возвращаем слайс каналов
 	return channels
 }
 
-func (storage *PsqURLlStorage) deleteWorker(ctx context.Context, doneCh chan struct{}, inputCh chan URLToDelete) chan error {
-	deleteError := make(chan error)
-
-	go func() {
-		defer close(deleteError)
-
-		for link := range inputCh {
-			err := storage.deleteURL(ctx, link)
-
-			select {
-			case <-doneCh:
-				return
-			case deleteError <- err:
-			}
-		}
-	}()
-	return nil
+func (storage *PsqURLlStorage) deleteWorker(ctx context.Context, doneCh chan struct{}, inputCh chan URLToDelete) {
+	for link := range inputCh {
+		storage.deleteURL(ctx, link)
+	}
 }
 
 func (storage *PsqURLlStorage) deleteURL(ctx context.Context, URLToDelete URLToDelete) error {
