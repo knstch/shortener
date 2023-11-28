@@ -191,7 +191,7 @@ func deleteURLsGenerator(ctx context.Context, doneCh chan struct{}, URLs []URLTo
 // fanOut принимает канал данных, порождает 100 горутин
 func (storage *PsqURLlStorage) fanOut(ctx context.Context, doneCh chan struct{}, inputCh chan URLToDelete) []chan error {
 	// количество горутин add
-	numWorkers := 100
+	numWorkers := 10
 	// каналы, в которые отправляются результаты
 	channels := make([]chan error, numWorkers)
 
