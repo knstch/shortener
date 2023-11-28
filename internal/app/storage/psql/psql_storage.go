@@ -215,7 +215,7 @@ func (storage *PsqURLlStorage) deleteURL(ctx context.Context, URLToDelete URLToD
 	if err != nil {
 		logger.ErrorLogger("Can't open connection: ", err)
 	}
-
+	defer dbLaunch.Close()
 	tx, err := storage.db.Begin()
 	if err != nil {
 		return err
