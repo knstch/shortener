@@ -84,6 +84,3 @@ func CheckCookieForID(res http.ResponseWriter, req *http.Request) int {
 	id = getUserID(userIDCookie.Value)
 	return id
 }
-
-// 	SELECT * FROM shorten_urls
-// DROP TABLE shorten_urls
