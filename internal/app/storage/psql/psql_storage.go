@@ -134,6 +134,11 @@ func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr 
 		Where("user_id = ?", id).
 		Rows(ctx)
 	rows.Err()
+	if err != nil {
+		logger.ErrorLogger("Error getting data: ", err)
+		return nil, err
+	}
+
 	defer rows.Close()
 
 	for rows.Next() {
