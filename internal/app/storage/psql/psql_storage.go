@@ -48,6 +48,7 @@ func (storage *PsqURLlStorage) findShortLink(ctx context.Context, longLink strin
 func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string, UserID int) (string, error) {
 
 	generatedShortLink := shortLinkGenerator(5)
+	context := context.Background()
 
 	type ShortenUrls struct {
 		ShortLink string `bun:"short_link"`
@@ -68,7 +69,7 @@ func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string, 
 
 	_, err := db.NewInsert().
 		Model(link).
-		Exec(ctx)
+		Exec(context)
 	var pgErr *pgconn.PgError
 
 	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
