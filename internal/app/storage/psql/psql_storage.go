@@ -23,64 +23,49 @@ func NewPsqlStorage(db *sql.DB) *PsqURLlStorage {
 }
 
 // Ищет короткую ссылку по длинной ссылке
-func (storage *PsqURLlStorage) findShortLink(ctx context.Context, longLink string) string {
-	var shortLink struct {
-		Link string `bun:"short_link"`
-	}
+func (storage *PsqURLlStorage) findShortLink(longLink string) string {
+	var shortLink string
 
-	var link string
-
-	db := bun.NewDB(storage.db, pgdialect.New())
-
-	err := db.NewSelect().
-		TableExpr("shorten_URLs").
-		Model(&shortLink).
-		Where("long_link = ?", longLink).
-		Scan(ctx, &link)
+	row := storage.db.QueryRowContext(context.Background(), "SELECT short_link from shorten_URLs WHERE long_link = $1", longLink)
+	err := row.Scan(&shortLink)
 	if err != nil {
-		logger.ErrorLogger("Error scanning data: ", err)
+		logger.ErrorLogger("Can't write longLink: ", err)
+		return ""
 	}
-
-	return link
+	return shortLink
 }
 
 // Запись данных в БД
 func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string, UserID int) (string, error) {
 
 	generatedShortLink := shortLinkGenerator(5)
-	context := context.Background()
 
-	type ShortenUrls struct {
-		ShortLink string `bun:"short_link"`
-		LongLink  string `bun:"long_link"`
-		UserID    int    `bun:"user_id"`
-		Deleted   bool   `bun:"deleted"`
+	tx, err := storage.db.Begin()
+	if err != nil {
+		logger.ErrorLogger("Can't make a transaction: ", err)
+		return "", err
 	}
 
-	link := &ShortenUrls{
-		ShortLink: generatedShortLink,
-		LongLink:  longLink,
-		UserID:    UserID,
-		Deleted:   false,
+	preparedRequest, err := storage.db.PrepareContext(ctx, "INSERT INTO shorten_URLs(short_link, long_link, user_id, deleted) VALUES ($1, $2, $3, false);")
+	if err != nil {
+		logger.ErrorLogger("Can't prepare request: ", err)
+		return "", err
 	}
+	defer preparedRequest.Close()
 
-	// Create a new DB instance
-	db := bun.NewDB(storage.db, pgdialect.New())
-
-	_, err := db.NewInsert().
-		Model(link).
-		Exec(context)
 	var pgErr *pgconn.PgError
 
+	_, err = preparedRequest.ExecContext(ctx, generatedShortLink, longLink, UserID)
 	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-		shortLink := storage.findShortLink(ctx, longLink)
+		shortLink := storage.findShortLink(longLink)
+		tx.Rollback()
 		return shortLink, err
 	}
+	tx.Commit()
 
 	return generatedShortLink, nil
 }
 
-// Запись ссылки в БД
 func (storage *PsqURLlStorage) PostLink(ctx context.Context, longLink string, URLaddr string, UserID int) (string, error) {
 	shortenLink, err := storage.insertData(ctx, longLink, UserID)
 	if err != nil {
@@ -117,34 +102,23 @@ type URLs struct {
 	ShortLink string `json:"short_url"`
 }
 
-// Получаем все ссылки пользователя по его ID из кук
 func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error) {
 
 	var userIDs []URLs
 
-	var bunURLS struct {
-		LongLink  string `bun:"long_link"`
-		ShortLink string `bun:"short_link"`
-	}
-
-	db := bun.NewDB(storage.db, pgdialect.New())
-
-	rows, err := db.NewSelect().
-		TableExpr("shorten_URLs").
-		Model(&bunURLS).
-		Where("user_id = ?", id).
-		Rows(ctx)
-	rows.Err()
+	allIDs, err := storage.db.QueryContext(ctx, "SELECT long_link, short_link from shorten_URLs WHERE user_id = $1;", id)
 	if err != nil {
-		logger.ErrorLogger("Error getting data: ", err)
+		logger.ErrorLogger("Error getting batch data: ", err)
 		return nil, err
 	}
+	defer func() {
+		_ = allIDs.Close()
+		_ = allIDs.Err()
+	}()
 
-	defer rows.Close()
-
-	for rows.Next() {
+	for allIDs.Next() {
 		var links URLs
-		err := rows.Scan(&links.LongLink, &links.ShortLink)
+		err := allIDs.Scan(&links.LongLink, &links.ShortLink)
 		if err != nil {
 			logger.ErrorLogger("Error scanning data: ", err)
 			return nil, err
@@ -154,7 +128,6 @@ func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr 
 			ShortLink: URLaddr + "/" + links.ShortLink,
 		})
 	}
-
 	jsonUserIDs, err := json.Marshal(userIDs)
 	if err != nil {
 		logger.ErrorLogger("Can't marshal IDs: ", err)
