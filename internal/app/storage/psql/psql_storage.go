@@ -258,9 +258,11 @@ func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr 
 
 func (storage *PsqURLlStorage) DeleteURLs(ctx context.Context, id int, shortURLs []string) error {
 
-	inputCh := deleteURLsGenerator(ctx, shortURLs)
+	context := context.Background()
 
-	storage.bulkDeleteStatusUpdate(id, inputCh)
+	inputCh := deleteURLsGenerator(context, shortURLs)
+
+	storage.bulkDeleteStatusUpdate(context, id, inputCh)
 
 	return nil
 }
@@ -281,7 +283,7 @@ func deleteURLsGenerator(ctx context.Context, URLs []string) chan string {
 	return URLsCh
 }
 
-func (storage *PsqURLlStorage) bulkDeleteStatusUpdate(id int, inputChs ...chan string) {
+func (storage *PsqURLlStorage) bulkDeleteStatusUpdate(ctx context.Context, id int, inputChs ...chan string) {
 	var wg sync.WaitGroup
 
 	deleteUpdate := func(c chan string) {
