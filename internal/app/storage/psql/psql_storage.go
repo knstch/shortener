@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"sync"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -136,110 +137,94 @@ func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr 
 	return jsonUserIDs, nil
 }
 
-type URLToDelete struct {
-	shortLinks string
-	userID     int
-}
+// type URLToDelete struct {
+// 	shortLinks []string
+// 	userID     int
+// }
 
-func (storage *PsqURLlStorage) DeleteURLs(ctx context.Context, id int, shortURLs []string) error {
+// func (storage *PsqURLlStorage) DeleteURLs(ctx context.Context, id int, shortURLs []string) error {
 
-	var deleteURLs []URLToDelete
+// 	contextFromDeleteURLs := context.Background()
 
-	for _, v := range shortURLs {
-		URL := URLToDelete{
-			shortLinks: v,
-			userID:     id,
-		}
-		deleteURLs = append(deleteURLs, URL)
-	}
-	contextFromDeleteURLs := context.Background()
-	doneCh := make(chan struct{})
-	defer close(doneCh)
+// 	doneCh := make(chan struct{})
+// 	defer close(doneCh)
 
-	inputCh := deleteURLsGenerator(contextFromDeleteURLs, doneCh, deleteURLs)
+// 	inputCh := deleteURLsGenerator(contextFromDeleteURLs, doneCh, deleteURLs)
 
-	storage.fanOut(contextFromDeleteURLs, doneCh, inputCh)
-	// deleteResult := fanIn(doneCh, channels...)
+// 	storage.fanOut(contextFromDeleteURLs, doneCh, inputCh)
 
-	// for err := range deleteResult {
-	// 	if err != nil {
-	// 		fmt.Println("Checking errors")
-	// 		logger.ErrorLogger("Error deleting URL: ", err)
-	// 	}
-	// }
+// 	return nil
+// }
 
-	return nil
-}
+// func deleteURLsGenerator(ctx context.Context, doneCh chan struct{}, URLs URLToDelete) chan URLToDelete {
+// 	URLsCh := make(chan URLToDelete)
+// 	go func() {
+// 		defer close(URLsCh)
+// 		for _, data := range URLs {
+// 			select {
+// 			case <-doneCh:
+// 				return
+// 			case URLsCh <- data:
+// 			}
+// 		}
+// 	}()
 
-func deleteURLsGenerator(ctx context.Context, doneCh chan struct{}, URLs []URLToDelete) chan URLToDelete {
-	URLsCh := make(chan URLToDelete)
-	go func() {
-		defer close(URLsCh)
-		for _, data := range URLs {
-			select {
-			case <-doneCh:
-				return
-			case URLsCh <- data:
-			}
-		}
-	}()
+// 	return URLsCh
+// }
 
-	return URLsCh
-}
+// // fanOut принимает канал данных, порождает 100 горутин
+// func (storage *PsqURLlStorage) fanOut(ctx context.Context, doneCh chan struct{}, inputCh chan URLToDelete) []chan error {
+// 	// количество горутин add
+// 	numWorkers := 10
+// 	// каналы, в которые отправляются результаты
+// 	channels := make([]chan error, numWorkers)
 
-// fanOut принимает канал данных, порождает 100 горутин
-func (storage *PsqURLlStorage) fanOut(ctx context.Context, doneCh chan struct{}, inputCh chan URLToDelete) []chan error {
-	// количество горутин add
-	numWorkers := 10
-	// каналы, в которые отправляются результаты
-	channels := make([]chan error, numWorkers)
+// 	for i := 0; i < numWorkers; i++ {
+// 		// получаем канал из горутины add
+// 		storage.deleteWorker(ctx, doneCh, inputCh)
+// 	}
 
-	for i := 0; i < numWorkers; i++ {
-		// получаем канал из горутины add
-		storage.deleteWorker(ctx, doneCh, inputCh)
-	}
+// 	// возвращаем слайс каналов
+// 	return channels
+// }
 
-	// возвращаем слайс каналов
-	return channels
-}
+// func (storage *PsqURLlStorage) deleteWorker(ctx context.Context, doneCh chan struct{}, inputCh chan URLToDelete) {
+// 	deleteErrs := make(chan error)
 
-func (storage *PsqURLlStorage) deleteWorker(ctx context.Context, doneCh chan struct{}, inputCh chan URLToDelete) {
-	deleteErrs := make(chan error)
+// 	go func() {
+// 		for link := range inputCh {
+// 			err := storage.deleteURL(ctx, link)
+// 			select {
+// 			case <-doneCh:
+// 				return
+// 			case deleteErrs <- err:
+// 			}
+// 		}
+// 	}()
+// }
 
-	go func() {
-		for link := range inputCh {
-			err := storage.deleteURL(ctx, link)
-			select {
-			case <-doneCh:
-				return
-			case deleteErrs <- err:
-			}
-		}
-	}()
-}
+// func (storage *PsqURLlStorage) deleteURL(ctx context.Context, URLToDelete URLToDelete) error {
 
-func (storage *PsqURLlStorage) deleteURL(ctx context.Context, URLToDelete URLToDelete) error {
+// 	tx, _ := storage.db.Begin()
 
-	tx, _ := storage.db.Begin()
+// 	defer tx.Rollback()
 
-	defer tx.Rollback()
+// 	db := bun.NewDB(storage.db, pgdialect.New())
 
-	db := bun.NewDB(storage.db, pgdialect.New())
-
-	_, err := db.NewUpdate().
-		TableExpr("shorten_URLs").
-		Set("deleted = ?", "true").
-		Where("short_link = (?)", URLToDelete.shortLinks).
-		WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
-			return uq.Where("user_id = ?", URLToDelete.userID)
-		}).
-		Exec(ctx)
-	if err != nil {
-		logger.ErrorLogger("Can't exec update request: ", err)
-	}
-	tx.Commit()
-	return nil
-}
+// 	_, err := db.NewUpdate().
+// 		TableExpr("shorten_URLs").
+// 		Set("deleted = ?", "true").
+// 		Where("short_link = (?)", URLToDelete.shortLinks).
+// 		WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
+// 			return uq.Where("user_id = ?", URLToDelete.userID)
+// 		}).
+// 		Exec(ctx)
+// 	if err != nil {
+// 		logger.ErrorLogger("Can't exec update request: ", err)
+// 	}
+// 	tx.Commit()
+// 	return nil
+// }
 
 // func fanIn(doneCh chan struct{}, resultChs ...chan error) chan error {
 // 	errorsCh := make(chan error)
@@ -270,3 +255,63 @@ func (storage *PsqURLlStorage) deleteURL(ctx context.Context, URLToDelete URLToD
 // 	}()
 // 	return errorsCh
 // }
+
+func (storage *PsqURLlStorage) DeleteURLs(ctx context.Context, id int, shortURLs []string) error {
+
+	inputCh := deleteURLsGenerator(ctx, shortURLs)
+
+	storage.bulkDeleteStatusUpdate(id, inputCh)
+
+	return nil
+}
+
+func deleteURLsGenerator(ctx context.Context, URLs []string) chan string {
+	URLsCh := make(chan string)
+	go func() {
+		defer close(URLsCh)
+		for _, data := range URLs {
+			select {
+			case <-ctx.Done():
+				return
+			case URLsCh <- data:
+			}
+		}
+	}()
+
+	return URLsCh
+}
+
+func (storage *PsqURLlStorage) bulkDeleteStatusUpdate(id int, inputChs ...chan string) {
+	var wg sync.WaitGroup
+
+	deleteUpdate := func(c chan string) {
+		var linksToDelete []string
+		for shortenLink := range c {
+			linksToDelete = append(linksToDelete, shortenLink)
+		}
+		db := bun.NewDB(storage.db, pgdialect.New())
+
+		_, err := db.NewUpdate().
+			TableExpr("shorten_URLs").
+			Set("deleted = ?", "true").
+			Where("short_link IN (?)", bun.In(linksToDelete)).
+			WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
+				return uq.Where("user_id = ?", id)
+			}).
+			Exec(context.Background())
+		if err != nil {
+			logger.ErrorLogger("Can't exec update request: ", err)
+		}
+		wg.Done()
+	}
+
+	wg.Add(len(inputChs))
+
+	for _, c := range inputChs {
+		go deleteUpdate(c)
+	}
+
+	go func() {
+		wg.Wait()
+	}()
+}
