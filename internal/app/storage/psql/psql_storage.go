@@ -196,7 +196,7 @@ func (storage *PsqURLlStorage) fanOut(ctx context.Context, doneCh chan struct{},
 
 	for i := 0; i < numWorkers; i++ {
 		// получаем канал из горутины add
-		go storage.deleteWorker(ctx, doneCh, inputCh)
+		storage.deleteWorker(ctx, doneCh, inputCh)
 	}
 
 	// возвращаем слайс каналов
@@ -204,41 +204,40 @@ func (storage *PsqURLlStorage) fanOut(ctx context.Context, doneCh chan struct{},
 }
 
 func (storage *PsqURLlStorage) deleteWorker(ctx context.Context, doneCh chan struct{}, inputCh chan URLToDelete) {
+	deleteErrs := make(chan error)
+
+	go func() {
+		for link := range inputCh {
+			err := storage.deleteURL(ctx, link)
+			select {
+			case <-doneCh:
+				return
+			case deleteErrs <- err:
+			}
+		}
+	}()
+}
+
+func (storage *PsqURLlStorage) deleteURL(ctx context.Context, URLToDelete URLToDelete) error {
+
 	tx, _ := storage.db.Begin()
 
 	defer tx.Rollback()
 
-	stmt, _ := tx.Prepare("UPDATE shorten_urls SET deleted = true WHERE user_id = $1 AND short_link = $2")
+	db := bun.NewDB(storage.db, pgdialect.New())
 
-	defer stmt.Close()
-
-	for link := range inputCh {
-		storage.deleteURL(ctx, link, stmt)
-	}
-
-	tx.Commit()
-}
-
-func (storage *PsqURLlStorage) deleteURL(ctx context.Context, URLToDelete URLToDelete, stmt *sql.Stmt) error {
-
-	// db := bun.NewDB(storage.db, pgdialect.New())
-
-	// _, err := db.NewUpdate().
-	// 	TableExpr("shorten_URLs").
-	// 	Set("deleted = ?", "true").
-	// 	Where("short_link = (?)", URLToDelete.shortLinks).
-	// 	WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
-	// 		return uq.Where("user_id = ?", URLToDelete.userID)
-	// 	}).
-	// 	Exec(ctx)
-	// if err != nil {
-	// 	logger.ErrorLogger("Can't exec update request: ", err)
-	// }
-	_, err := stmt.ExecContext(ctx, URLToDelete.userID, URLToDelete.shortLinks)
+	_, err := db.NewUpdate().
+		TableExpr("shorten_URLs").
+		Set("deleted = ?", "true").
+		Where("short_link = (?)", URLToDelete.shortLinks).
+		WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
+			return uq.Where("user_id = ?", URLToDelete.userID)
+		}).
+		Exec(ctx)
 	if err != nil {
-		return err
+		logger.ErrorLogger("Can't exec update request: ", err)
 	}
-
+	tx.Commit()
 	return nil
 }
 

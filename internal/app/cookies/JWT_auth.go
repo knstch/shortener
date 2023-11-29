@@ -1,7 +1,6 @@
 package cookies
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -65,7 +64,6 @@ func getUserID(tokenString string) int {
 func CheckCookieForID(res http.ResponseWriter, req *http.Request) int {
 	var id int
 	userIDCookie, err := req.Cookie("UserID")
-	fmt.Println("UserID cookie: ", userIDCookie)
 	if err != nil {
 		if req.URL.Path == "/api/user/urls" && req.Method == http.MethodGet {
 			return -1
