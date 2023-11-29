@@ -23,49 +23,64 @@ func NewPsqlStorage(db *sql.DB) *PsqURLlStorage {
 }
 
 // Ищет короткую ссылку по длинной ссылке
-func (storage *PsqURLlStorage) findShortLink(longLink string) string {
-	var shortLink string
-
-	row := storage.db.QueryRowContext(context.Background(), "SELECT short_link from shorten_URLs WHERE long_link = $1", longLink)
-	err := row.Scan(&shortLink)
-	if err != nil {
-		logger.ErrorLogger("Can't write longLink: ", err)
-		return ""
+func (storage *PsqURLlStorage) findShortLink(ctx context.Context, longLink string) string {
+	var shortLink struct {
+		Link string `bun:"short_link"`
 	}
-	return shortLink
+
+	var link string
+
+	db := bun.NewDB(storage.db, pgdialect.New())
+
+	err := db.NewSelect().
+		TableExpr("shorten_URLs").
+		Model(&shortLink).
+		Where("long_link = ?", longLink).
+		Scan(ctx, &link)
+	if err != nil {
+		logger.ErrorLogger("Error scanning data: ", err)
+	}
+
+	return link
 }
 
 // Запись данных в БД
 func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string, UserID int) (string, error) {
 
 	generatedShortLink := shortLinkGenerator(5)
+	context := context.Background()
 
-	tx, err := storage.db.Begin()
-	if err != nil {
-		logger.ErrorLogger("Can't make a transaction: ", err)
-		return "", err
+	type ShortenUrls struct {
+		ShortLink string `bun:"short_link"`
+		LongLink  string `bun:"long_link"`
+		UserID    int    `bun:"user_id"`
+		Deleted   bool   `bun:"deleted"`
 	}
 
-	preparedRequest, err := storage.db.PrepareContext(ctx, "INSERT INTO shorten_URLs(short_link, long_link, user_id, deleted) VALUES ($1, $2, $3, false);")
-	if err != nil {
-		logger.ErrorLogger("Can't prepare request: ", err)
-		return "", err
+	link := &ShortenUrls{
+		ShortLink: generatedShortLink,
+		LongLink:  longLink,
+		UserID:    UserID,
+		Deleted:   false,
 	}
-	defer preparedRequest.Close()
 
+	// Create a new DB instance
+	db := bun.NewDB(storage.db, pgdialect.New())
+
+	_, err := db.NewInsert().
+		Model(link).
+		Exec(context)
 	var pgErr *pgconn.PgError
 
-	_, err = preparedRequest.ExecContext(ctx, generatedShortLink, longLink, UserID)
 	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-		shortLink := storage.findShortLink(longLink)
-		tx.Rollback()
+		shortLink := storage.findShortLink(ctx, longLink)
 		return shortLink, err
 	}
-	tx.Commit()
 
 	return generatedShortLink, nil
 }
 
+// Запись ссылки в БД
 func (storage *PsqURLlStorage) PostLink(ctx context.Context, longLink string, URLaddr string, UserID int) (string, error) {
 	shortenLink, err := storage.insertData(ctx, longLink, UserID)
 	if err != nil {
@@ -102,23 +117,34 @@ type URLs struct {
 	ShortLink string `json:"short_url"`
 }
 
+// Получаем все ссылки пользователя по его ID из кук
 func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error) {
 
 	var userIDs []URLs
 
-	allIDs, err := storage.db.QueryContext(ctx, "SELECT long_link, short_link from shorten_URLs WHERE user_id = $1;", id)
+	var bunURLS struct {
+		LongLink  string `bun:"long_link"`
+		ShortLink string `bun:"short_link"`
+	}
+
+	db := bun.NewDB(storage.db, pgdialect.New())
+
+	rows, err := db.NewSelect().
+		TableExpr("shorten_URLs").
+		Model(&bunURLS).
+		Where("user_id = ?", id).
+		Rows(ctx)
+	rows.Err()
 	if err != nil {
-		logger.ErrorLogger("Error getting batch data: ", err)
+		logger.ErrorLogger("Error getting data: ", err)
 		return nil, err
 	}
-	defer func() {
-		_ = allIDs.Close()
-		_ = allIDs.Err()
-	}()
 
-	for allIDs.Next() {
+	defer rows.Close()
+
+	for rows.Next() {
 		var links URLs
-		err := allIDs.Scan(&links.LongLink, &links.ShortLink)
+		err := rows.Scan(&links.LongLink, &links.ShortLink)
 		if err != nil {
 			logger.ErrorLogger("Error scanning data: ", err)
 			return nil, err
@@ -128,6 +154,7 @@ func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr 
 			ShortLink: URLaddr + "/" + links.ShortLink,
 		})
 	}
+
 	jsonUserIDs, err := json.Marshal(userIDs)
 	if err != nil {
 		logger.ErrorLogger("Can't marshal IDs: ", err)
@@ -144,7 +171,7 @@ func (storage *PsqURLlStorage) DeleteURLs(ctx context.Context, id int, shortURLs
 
 	inputCh := deleteURLsGenerator(context, shortURLs)
 
-	storage.bulkDeleteStatusUpdate(context, id, inputCh)
+	storage.bulkDeleteStatusUpdate(id, inputCh)
 
 	return nil
 }
@@ -165,38 +192,34 @@ func deleteURLsGenerator(ctx context.Context, URLs []string) chan string {
 	return URLsCh
 }
 
-// Функция-го рутина, принимает канал с ссылками для удаления
-func (storage *PsqURLlStorage) deleteUpdate(inputChs chan string, id int) {
+func (storage *PsqURLlStorage) bulkDeleteStatusUpdate(id int, inputChs ...chan string) {
 	var wg sync.WaitGroup
-	var linksToDelete []string
-	for shortenLink := range inputChs {
-		linksToDelete = append(linksToDelete, shortenLink)
+
+	deleteUpdate := func(c chan string) {
+		var linksToDelete []string
+		for shortenLink := range c {
+			linksToDelete = append(linksToDelete, shortenLink)
+		}
+		db := bun.NewDB(storage.db, pgdialect.New())
+
+		_, err := db.NewUpdate().
+			TableExpr("shorten_URLs").
+			Set("deleted = ?", "true").
+			Where("short_link IN (?)", bun.In(linksToDelete)).
+			WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
+				return uq.Where("user_id = ?", id)
+			}).
+			Exec(context.Background())
+		if err != nil {
+			logger.ErrorLogger("Can't exec update request: ", err)
+		}
+		wg.Done()
 	}
-
-	db := bun.NewDB(storage.db, pgdialect.New())
-
-	_, err := db.NewUpdate().
-		TableExpr("shorten_URLs").
-		Set("deleted = ?", "true").
-		Where("short_link IN (?)", bun.In(linksToDelete)).
-		WhereGroup(" AND ", func(uq *bun.UpdateQuery) *bun.UpdateQuery {
-			return uq.Where("user_id = ?", id)
-		}).
-		Exec(context.Background())
-	if err != nil {
-		logger.ErrorLogger("Can't exec update request: ", err)
-	}
-	wg.Done()
-}
-
-// Удаление всех ссылкой bulk запросом
-func (storage *PsqURLlStorage) bulkDeleteStatusUpdate(ctx context.Context, id int, inputChs ...chan string) {
-	var wg sync.WaitGroup
 
 	wg.Add(len(inputChs))
 
 	for _, c := range inputChs {
-		go storage.deleteUpdate(c, id)
+		go deleteUpdate(c)
 	}
 
 	go func() {
