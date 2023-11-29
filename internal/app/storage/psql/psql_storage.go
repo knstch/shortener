@@ -133,10 +133,10 @@ func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr 
 		Model(&bunURLS).
 		Where("user_id = ?", id).
 		Rows(ctx)
-
 	if err != nil {
 		logger.ErrorLogger("Error parsing rows: ", err)
 	}
+
 	defer rows.Close()
 
 	for rows.Next() {

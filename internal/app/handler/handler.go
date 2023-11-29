@@ -181,7 +181,7 @@ func (h *Handler) GetUserLinks(res http.ResponseWriter, req *http.Request) {
 
 		res.Header().Set("Content-Type", "application/json")
 		if string(userURLs) == "null" {
-			res.WriteHeader(204)
+			res.WriteHeader(200)
 			res.Write([]byte("No content"))
 		} else {
 			res.WriteHeader(200)
