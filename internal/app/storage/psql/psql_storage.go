@@ -59,7 +59,7 @@ func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string, 
 	link := &ShortenUrls{
 		ShortLink: generatedShortLink,
 		LongLink:  longLink,
-		UserID:    123,
+		UserID:    UserID,
 		Deleted:   false,
 	}
 
