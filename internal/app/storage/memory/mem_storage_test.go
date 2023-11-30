@@ -27,7 +27,7 @@ func PostLink(t *testing.T) {
 	storage := NewMemStorage()
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testShortLink, _ := storage.PostLink(context.Background(), tests[i].request, "http://localhost:8080")
+			testShortLink, _ := storage.PostLink(context.Background(), tests[i].request, "http://localhost:8080", 0)
 			assert.Equal(t, testShortLink, tests[i].want)
 		})
 	}
@@ -55,7 +55,7 @@ func TestFindLink(t *testing.T) {
 	}
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			longLink, _ := storage.FindLink(tests[i].request)
+			longLink, _, _ := storage.FindLink(tests[i].request)
 			assert.Equal(t, longLink, tests[i].want)
 		})
 	}

@@ -29,6 +29,8 @@ func RequestsRouter(h *handler.Handler) chi.Router {
 	router.Post("/api/shorten", h.PostLongLinkJSON)
 	router.Get("/ping", h.PingDB)
 	router.Post("/api/shorten/batch", h.PostBatch)
+	router.Get("/api/user/urls", h.GetUserLinks)
+	router.Delete("/api/user/urls", h.DeleteLinks)
 	return router
 }
 
