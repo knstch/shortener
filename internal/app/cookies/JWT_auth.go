@@ -40,7 +40,7 @@ func buildJWTString() (string, error) {
 	return tokenString, nil
 }
 
-func getUserID(tokenString string) int {
+func getUserID(tokenString string) (int, error) {
 	// создаём экземпляр структуры с утверждениями
 	claims := &Claims{}
 	// парсим из строки токена tokenString в структуру claims
@@ -52,13 +52,13 @@ func getUserID(tokenString string) int {
 		return []byte(secretKey), nil
 	})
 	if err != nil {
-		return -1
+		return 0, err
 	}
 	if !token.Valid {
 		logger.ErrorLogger("Token is not valid", nil)
-		return -1
+		return 0, err
 	}
-	return claims.UserID
+	return claims.UserID, nil
 }
 
 func CheckCookieForID(res http.ResponseWriter, req *http.Request) (int, error) {
@@ -79,9 +79,17 @@ func CheckCookieForID(res http.ResponseWriter, req *http.Request) (int, error) {
 			Path:  "/",
 		}
 		http.SetCookie(res, &cookie)
-		id = getUserID(jwt)
+		id, err = getUserID(jwt)
+		if err != nil {
+			logger.ErrorLogger("Error making cookie: ", err)
+			return 0, err
+		}
 		return id, nil
 	}
-	id = getUserID(userIDCookie.Value)
+	id, err = getUserID(userIDCookie.Value)
+	if err != nil {
+		logger.ErrorLogger("Error making cookie: ", err)
+		return 0, err
+	}
 	return id, nil
 }
