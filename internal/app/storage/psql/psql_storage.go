@@ -24,9 +24,6 @@ func NewPsqlStorage(db *sql.DB) *PsqURLlStorage {
 
 // Ищет короткую ссылку по длинной ссылке
 func (storage *PsqURLlStorage) findShortLink(ctx context.Context, longLink string) string {
-	var shortLink struct {
-		Link string `bun:"short_link"`
-	}
 
 	var link string
 
@@ -34,7 +31,7 @@ func (storage *PsqURLlStorage) findShortLink(ctx context.Context, longLink strin
 
 	err := db.NewSelect().
 		TableExpr("shorten_URLs").
-		Model(&shortLink).
+		Column("short_link").
 		Where("long_link = ?", longLink).
 		Scan(ctx, &link)
 	if err != nil {
@@ -48,7 +45,6 @@ func (storage *PsqURLlStorage) findShortLink(ctx context.Context, longLink strin
 func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string, UserID int) (string, error) {
 
 	generatedShortLink := shortLinkGenerator(5)
-	context := context.Background()
 
 	type ShortenUrls struct {
 		ShortLink string `bun:"short_link"`
@@ -69,7 +65,7 @@ func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string, 
 
 	_, err := db.NewInsert().
 		Model(link).
-		Exec(context)
+		Exec(ctx)
 	var pgErr *pgconn.PgError
 
 	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
@@ -221,8 +217,5 @@ func (storage *PsqURLlStorage) bulkDeleteStatusUpdate(id int, inputChs ...chan s
 	for _, c := range inputChs {
 		go deleteUpdate(c)
 	}
-
-	go func() {
-		wg.Wait()
-	}()
+	wg.Wait()
 }

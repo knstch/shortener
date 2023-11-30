@@ -61,16 +61,17 @@ func getUserID(tokenString string) int {
 	return claims.UserID
 }
 
-func CheckCookieForID(res http.ResponseWriter, req *http.Request) int {
+func CheckCookieForID(res http.ResponseWriter, req *http.Request) (int, error) {
 	var id int
 	userIDCookie, err := req.Cookie("UserID")
 	if err != nil {
-		if req.URL.Path == "/api/user/urls" && req.Method == http.MethodGet {
-			return -1
+		if req.URL.Path == "/api/user/urls" {
+			return 0, err
 		}
 		jwt, err := buildJWTString()
 		if err != nil {
 			logger.ErrorLogger("Error making cookie: ", err)
+			return 0, err
 		}
 		cookie := http.Cookie{
 			Name:  "UserID",
@@ -79,8 +80,8 @@ func CheckCookieForID(res http.ResponseWriter, req *http.Request) int {
 		}
 		http.SetCookie(res, &cookie)
 		id = getUserID(jwt)
-		return id
+		return id, nil
 	}
 	id = getUserID(userIDCookie.Value)
-	return id
+	return id, nil
 }

@@ -30,7 +30,10 @@ func (h *Handler) PostURL(res http.ResponseWriter, req *http.Request) {
 		logger.ErrorLogger("Error during reading body: ", err)
 	}
 
-	UserID := cookies.CheckCookieForID(res, req)
+	UserID, err := cookies.CheckCookieForID(res, req)
+	if err != nil {
+		logger.ErrorLogger("Error getting cookie: ", err)
+	}
 
 	returnedShortLink, err := h.s.PostLink(req.Context(), string(body), config.ReadyConfig.BaseURL, UserID)
 	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
@@ -57,7 +60,10 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	var longLink link
 	json.Unmarshal(body, &longLink)
 
-	UserID := cookies.CheckCookieForID(res, req)
+	UserID, err := cookies.CheckCookieForID(res, req)
+	if err != nil {
+		logger.ErrorLogger("Error getting cookie: ", err)
+	}
 
 	shortenURL, err := h.s.PostLink(req.Context(), longLink.URL, config.ReadyConfig.BaseURL, UserID)
 	var resultJSON = result{
@@ -90,7 +96,10 @@ func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 		logger.ErrorLogger("Failed to read json: ", err)
 	}
 
-	UserID := cookies.CheckCookieForID(res, req)
+	UserID, err := cookies.CheckCookieForID(res, req)
+	if err != nil {
+		logger.ErrorLogger("Error getting cookie: ", err)
+	}
 
 	for i := range originalRequest {
 
@@ -167,47 +176,46 @@ func (h *Handler) PingDB(res http.ResponseWriter, req *http.Request) {
 // Выдает ссылки по ID пользователя из кук
 func (h *Handler) GetUserLinks(res http.ResponseWriter, req *http.Request) {
 
-	userID := cookies.CheckCookieForID(res, req)
-
-	switch userID {
-	case -1:
+	userID, err := cookies.CheckCookieForID(res, req)
+	if err != nil {
+		logger.ErrorLogger("Unauthorized access : ", err)
 		res.WriteHeader(401)
 		res.Write([]byte("Unauthorized"))
-	default:
-		userURLs, err := h.s.GetURLsByID(req.Context(), userID, config.ReadyConfig.BaseURL)
-		if err != nil {
-			logger.ErrorLogger("Error getting URLs by ID", err)
-		}
+		return
+	}
+	userURLs, err := h.s.GetURLsByID(req.Context(), userID, config.ReadyConfig.BaseURL)
+	if err != nil {
+		logger.ErrorLogger("Error getting URLs by ID", err)
+	}
 
-		res.Header().Set("Content-Type", "application/json")
-		if string(userURLs) == "null" {
-			res.WriteHeader(200)
-			res.Write([]byte("No content"))
-		} else {
-			res.WriteHeader(200)
-			res.Write(userURLs)
-		}
+	res.Header().Set("Content-Type", "application/json")
+	if string(userURLs) == "null" {
+		res.WriteHeader(200)
+		res.Write([]byte("No content"))
+	} else {
+		res.WriteHeader(200)
+		res.Write(userURLs)
 	}
 }
 
 func (h *Handler) DeleteLinks(res http.ResponseWriter, req *http.Request) {
-	userID := cookies.CheckCookieForID(res, req)
+	userID, err := cookies.CheckCookieForID(res, req)
+	if err != nil {
+		logger.ErrorLogger("Error getting cookie: ", err)
+		res.WriteHeader(401)
+		res.Write([]byte("You have no links to delete"))
+		return
+	}
 
 	var URLs []string
 
-	err := json.NewDecoder(req.Body).Decode(&URLs)
+	err = json.NewDecoder(req.Body).Decode(&URLs)
 	if err != nil {
 		logger.ErrorLogger("Failed to read json: ", err)
 	}
 
-	switch userID {
-	case -1:
-		res.WriteHeader(401)
-		res.Write([]byte("You have no links to delete"))
-	default:
-		h.s.DeleteURLs(req.Context(), userID, URLs)
-		res.Header().Set("Content-Type", "text/plain")
-		res.WriteHeader(202)
-		res.Write([]byte("Deleted"))
-	}
+	h.s.DeleteURLs(req.Context(), userID, URLs)
+	res.Header().Set("Content-Type", "text/plain")
+	res.WriteHeader(202)
+	res.Write([]byte("Deleted"))
 }
