@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/signal"
 
+	_ "net/http/pprof"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/knstch/shortener/internal/app/handler"
 	dbconnect "github.com/knstch/shortener/internal/app/storage/DBConnect"
@@ -56,7 +58,9 @@ func main() {
 		Addr:    config.ReadyConfig.ServerAddr,
 		Handler: RequestsRouter(h),
 	}
-
+	go func() {
+		http.ListenAndServe("localhost:6060", nil)
+	}()
 	idleConnsClosed := make(chan struct{})
 	go func() {
 		sigint := make(chan os.Signal, 1)

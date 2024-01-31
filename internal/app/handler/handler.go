@@ -52,6 +52,7 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	}
 	var longLink link
 	json.Unmarshal(body, &longLink)
+
 	shortenURL, err := h.s.PostLink(req.Context(), longLink.URL, config.ReadyConfig.BaseURL)
 	var resultJSON = result{
 		Result: shortenURL,
