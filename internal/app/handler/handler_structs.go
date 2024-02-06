@@ -24,7 +24,7 @@ type link struct {
 }
 
 // Структура для записи в json
-type result struct {
+type Result struct {
 	Result string `json:"result"`
 }
 
@@ -33,7 +33,7 @@ type originalLink struct {
 	CorrelationID string `json:"correlation_id"`
 }
 
-type shortLink struct {
+type ShortLink struct {
 	Result        string `json:"short_url"`
 	CorrelationID string `json:"correlation_id"`
 }

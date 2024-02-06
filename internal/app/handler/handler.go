@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 
+	_ "net/http/pprof"
+
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	config "github.com/knstch/shortener/cmd/config"
@@ -66,7 +68,7 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	}
 
 	shortenURL, err := h.s.PostLink(req.Context(), longLink.URL, config.ReadyConfig.BaseURL, UserID)
-	var resultJSON = result{
+	var resultJSON = Result{
 		Result: shortenURL,
 	}
 	resp, _ := json.Marshal(resultJSON)
@@ -87,7 +89,7 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 
 func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 	var originalRequest []originalLink
-	var shortenResponse []shortLink
+	var shortenResponse []ShortLink
 
 	statusCode := 201
 
@@ -112,7 +114,7 @@ func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 		shortenResponse = append(shortenResponse,
-			shortLink{
+			ShortLink{
 				Result:        returnedShortLink,
 				CorrelationID: originalRequest[i].CorrelationID,
 			})

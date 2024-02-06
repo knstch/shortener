@@ -21,7 +21,7 @@ func ParseConfig() {
 	flag.StringVar(&ReadyConfig.BaseURL, "b", "http://localhost"+ReadyConfig.ServerAddr, "address to run server")
 	flag.StringVar(&ReadyConfig.FileStorage, "f", "short-url-db.json", "file to save links")
 	// DSN host=localhost user=postgres password=Xer@0101 dbname=shorten_URLs sslmode=disable
-	flag.StringVar(&ReadyConfig.DSN, "d", "", "DSN to access DB")
+	flag.StringVar(&ReadyConfig.DSN, "d", "postgres://postgres:Xer_0101@localhost:5432/shorten_urls", "DSN to access DB")
 	flag.StringVar(&ReadyConfig.SecretKey, "s", "aboba", "Secret key for JWS")
 	flag.Parse()
 	if secretKey := os.Getenv("SECRET_KEY"); secretKey != "" {
