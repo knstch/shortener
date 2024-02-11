@@ -7,30 +7,19 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/go-chi/chi/v5"
+	_ "net/http/pprof"
+
+	_ "net/http/pprof"
+
 	"github.com/knstch/shortener/internal/app/handler"
+	router "github.com/knstch/shortener/internal/app/router"
 	dbconnect "github.com/knstch/shortener/internal/app/storage/DBConnect"
 	memory "github.com/knstch/shortener/internal/app/storage/memory"
 	"github.com/knstch/shortener/internal/app/storage/psql"
 
 	"github.com/knstch/shortener/cmd/config"
 	"github.com/knstch/shortener/internal/app/logger"
-	gzipCompressor "github.com/knstch/shortener/internal/app/middleware/gzipCompressor"
-	loggerMiddleware "github.com/knstch/shortener/internal/app/middleware/loggerMiddleware"
 )
-
-// Роутер запросов
-func RequestsRouter(h *handler.Handler) chi.Router {
-	router := chi.NewRouter()
-	router.Use(gzipCompressor.GzipMiddleware)
-	router.Use(loggerMiddleware.RequestsLogger)
-	router.Get("/{url}", h.GetURL)
-	router.Post("/", h.PostURL)
-	router.Post("/api/shorten", h.PostLongLinkJSON)
-	router.Get("/ping", h.PingDB)
-	router.Post("/api/shorten/batch", h.PostBatch)
-	return router
-}
 
 func main() {
 	config.ParseConfig()
@@ -54,9 +43,11 @@ func main() {
 
 	srv := http.Server{
 		Addr:    config.ReadyConfig.ServerAddr,
-		Handler: RequestsRouter(h),
+		Handler: router.RequestsRouter(h),
 	}
-
+	go func() {
+		http.ListenAndServe("localhost:6060", nil)
+	}()
 	idleConnsClosed := make(chan struct{})
 	go func() {
 		sigint := make(chan os.Signal, 1)
