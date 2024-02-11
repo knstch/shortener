@@ -216,7 +216,10 @@ func (h *Handler) DeleteLinks(res http.ResponseWriter, req *http.Request) {
 		logger.ErrorLogger("Failed to read json: ", err)
 	}
 
-	h.s.DeleteURLs(req.Context(), userID, URLs)
+	err = h.s.DeleteURLs(req.Context(), userID, URLs)
+	if err != nil {
+		logger.ErrorLogger("Error deleting links", err)
+	}
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(202)
 	res.Write([]byte("Deleted"))

@@ -33,7 +33,6 @@ func linkGenerator(length int) string {
 }
 
 type user struct {
-	login      string
 	shortLinks []string
 	longLinks  []string
 	cookie     *http.Cookie
@@ -44,7 +43,6 @@ var userOne user
 type want struct {
 	statusCode  int
 	contentType string
-	body        string
 }
 
 type request struct {
@@ -123,6 +121,7 @@ func TestPostLink(t *testing.T) {
 			req.Header.Set("Content-Type", tt.reqest.contentType)
 			if userOne.cookie == nil {
 				getCookieRes := httptest.NewRecorder()
+				defer getCookieRes.Result().Body.Close()
 				getCookie := httptest.NewRequest(http.MethodPost, "http://localhost:8080/", bytes.NewBuffer([]byte(linkGenerator(10))))
 				getCookie.Header.Set("Content-Type", tt.reqest.contentType)
 				router.ServeHTTP(getCookieRes, getCookie)
@@ -133,7 +132,6 @@ func TestPostLink(t *testing.T) {
 			}
 			rr := httptest.NewRecorder()
 			router.ServeHTTP(rr, req)
-
 			assert.Equal(t, tt.want.contentType, rr.Header().Get("Content-Type"))
 			assert.Equal(t, tt.want.statusCode, rr.Code)
 			userOne.shortLinks = append(userOne.shortLinks, rr.Body.String())
@@ -314,7 +312,6 @@ func TestPostLinkJSON(t *testing.T) {
 			req.AddCookie(userOne.cookie)
 			rr := httptest.NewRecorder()
 			router.ServeHTTP(rr, req)
-
 			assert.Equal(t, tt.want.contentType, rr.Header().Get("Content-Type"))
 			assert.Equal(t, tt.want.statusCode, rr.Code)
 

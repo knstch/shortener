@@ -43,9 +43,6 @@ func main() {
 		Addr:    config.ReadyConfig.ServerAddr,
 		Handler: router.RequestsRouter(h),
 	}
-	go func() {
-		http.ListenAndServe("localhost:6060", nil)
-	}()
 	idleConnsClosed := make(chan struct{})
 	go func() {
 		sigint := make(chan os.Signal, 1)
