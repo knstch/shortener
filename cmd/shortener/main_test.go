@@ -16,6 +16,7 @@ import (
 	"github.com/knstch/shortener/internal/app/logger"
 	"github.com/knstch/shortener/internal/app/router"
 	dbconnect "github.com/knstch/shortener/internal/app/storage/DBConnect"
+	memory "github.com/knstch/shortener/internal/app/storage/memory"
 	"github.com/knstch/shortener/internal/app/storage/psql"
 	"github.com/stretchr/testify/assert"
 )
@@ -52,13 +53,22 @@ type request struct {
 
 func TestPostLink(t *testing.T) {
 	config.ParseConfig()
-	db, err := sql.Open("pgx", config.ReadyConfig.DSN)
-	if err != nil {
-		logger.ErrorLogger("Can't open connection: ", err)
+	var storage handler.Storage
+	var ping handler.PingChecker
+	if config.ReadyConfig.DSN != "" {
+		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+		if err != nil {
+			logger.ErrorLogger("Can't open connection: ", err)
+		}
+		err = psql.InitDB(db)
+		if err != nil {
+			logger.ErrorLogger("Can't init DB: ", err)
+		}
+		storage = psql.NewPsqlStorage(db)
+		ping = dbconnect.NewDBConnection(db)
+	} else {
+		storage = memory.NewMemStorage()
 	}
-
-	storage := psql.NewPsqlStorage(db)
-	ping := dbconnect.NewDBConnection(db)
 	h := handler.NewHandler(storage, ping)
 
 	router := router.RequestsRouter(h)
@@ -131,13 +141,22 @@ func TestPostLink(t *testing.T) {
 }
 
 func TestGetLink(t *testing.T) {
-	db, err := sql.Open("pgx", config.ReadyConfig.DSN)
-	if err != nil {
-		logger.ErrorLogger("Can't open connection: ", err)
+	var storage handler.Storage
+	var ping handler.PingChecker
+	if config.ReadyConfig.DSN != "" {
+		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+		if err != nil {
+			logger.ErrorLogger("Can't open connection: ", err)
+		}
+		err = psql.InitDB(db)
+		if err != nil {
+			logger.ErrorLogger("Can't init DB: ", err)
+		}
+		storage = psql.NewPsqlStorage(db)
+		ping = dbconnect.NewDBConnection(db)
+	} else {
+		storage = memory.NewMemStorage()
 	}
-
-	storage := psql.NewPsqlStorage(db)
-	ping := dbconnect.NewDBConnection(db)
 	h := handler.NewHandler(storage, ping)
 
 	router := router.RequestsRouter(h)
@@ -193,13 +212,22 @@ func TestGetLink(t *testing.T) {
 }
 
 func TestPostLinkJSON(t *testing.T) {
-	db, err := sql.Open("pgx", config.ReadyConfig.DSN)
-	if err != nil {
-		logger.ErrorLogger("Can't open connection: ", err)
+	var storage handler.Storage
+	var ping handler.PingChecker
+	if config.ReadyConfig.DSN != "" {
+		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+		if err != nil {
+			logger.ErrorLogger("Can't open connection: ", err)
+		}
+		err = psql.InitDB(db)
+		if err != nil {
+			logger.ErrorLogger("Can't init DB: ", err)
+		}
+		storage = psql.NewPsqlStorage(db)
+		ping = dbconnect.NewDBConnection(db)
+	} else {
+		storage = memory.NewMemStorage()
 	}
-
-	storage := psql.NewPsqlStorage(db)
-	ping := dbconnect.NewDBConnection(db)
 	h := handler.NewHandler(storage, ping)
 
 	router := router.RequestsRouter(h)
@@ -260,13 +288,22 @@ func TestPostLinkJSON(t *testing.T) {
 }
 
 func TestPostLinkJSONBatch(t *testing.T) {
-	db, err := sql.Open("pgx", config.ReadyConfig.DSN)
-	if err != nil {
-		logger.ErrorLogger("Can't open connection: ", err)
+	var storage handler.Storage
+	var ping handler.PingChecker
+	if config.ReadyConfig.DSN != "" {
+		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+		if err != nil {
+			logger.ErrorLogger("Can't open connection: ", err)
+		}
+		err = psql.InitDB(db)
+		if err != nil {
+			logger.ErrorLogger("Can't init DB: ", err)
+		}
+		storage = psql.NewPsqlStorage(db)
+		ping = dbconnect.NewDBConnection(db)
+	} else {
+		storage = memory.NewMemStorage()
 	}
-
-	storage := psql.NewPsqlStorage(db)
-	ping := dbconnect.NewDBConnection(db)
 	h := handler.NewHandler(storage, ping)
 
 	router := router.RequestsRouter(h)
