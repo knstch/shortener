@@ -48,22 +48,47 @@ func (storage *MemStorage) load(fname string) error {
 }
 
 // Ищем ссылку
-func (storage MemStorage) FindLink(url string) (string, error) {
+func (storage MemStorage) FindLink(url string) (string, bool, error) {
 	storage.load(config.ReadyConfig.FileStorage)
 	value, ok := storage.Data[url]
 	if !ok {
-		return "", nil
+		return "", false, nil
 	}
-	return value, nil
+	return value, false, nil
+}
+
+type IntegrityError struct {
+	msg string
+}
+
+func (e *IntegrityError) Error() string {
+	return e.msg
+}
+
+func NewIntegrityError(msg string) error {
+	return &IntegrityError{msg: msg}
 }
 
 // Запись ссылки в базу данных, json хранилище или in-memory. Если идет запись дубликата в БД,
 // возвращается уже существующая ссылка
-func (storage *MemStorage) PostLink(_ context.Context, longLink string, URLaddr string) (string, error) {
+func (storage *MemStorage) PostLink(_ context.Context, longLink string, URLaddr string, _ int) (string, error) {
 	storage.Mu.Lock()
 	defer storage.Mu.Unlock()
+	for k, v := range storage.Data {
+		if v == longLink {
+			return URLaddr + "/" + k, NewIntegrityError("Duplicate")
+		}
+	}
 	storage.Counter++
 	storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = longLink
 	storage.save(config.ReadyConfig.FileStorage)
 	return URLaddr + "/shortenLink" + strconv.Itoa(storage.Counter), nil
+}
+
+func (storage *MemStorage) GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error) {
+	return []byte("Memory storage can't operate with user IDs"), nil
+}
+
+func (storage *MemStorage) DeleteURLs(ctx context.Context, id int, shortURLs []string) error {
+	return nil
 }
