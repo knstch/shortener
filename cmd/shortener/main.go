@@ -9,8 +9,6 @@ import (
 
 	_ "net/http/pprof"
 
-	_ "net/http/pprof"
-
 	"github.com/knstch/shortener/internal/app/handler"
 	router "github.com/knstch/shortener/internal/app/router"
 	dbconnect "github.com/knstch/shortener/internal/app/storage/DBConnect"

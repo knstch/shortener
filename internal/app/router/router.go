@@ -1,7 +1,7 @@
 package router
 
 import (
-	pprof "net/http/pprof"
+	// pprof "net/http/pprof"
 
 	"github.com/go-chi/chi"
 	"github.com/knstch/shortener/internal/app/handler"
@@ -21,11 +21,11 @@ func RequestsRouter(h *handler.Handler) chi.Router {
 	router.Post("/api/shorten/batch", h.PostBatch)
 	router.Get("/api/user/urls", h.GetUserLinks)
 	router.Delete("/api/user/urls", h.DeleteLinks)
-	router.Get("/debug/pprof/", pprof.Index)
-	router.Get("/debug/pprof/heap", pprof.Index)
-	router.Get("/debug/pprof/cmdline", pprof.Cmdline)
-	router.Get("/debug/pprof/profile", pprof.Profile)
-	router.Get("/debug/pprof/symbol", pprof.Symbol)
-	router.Get("/debug/pprof/trace", pprof.Trace)
+	// router.Get("/debug/pprof/", pprof.Index)
+	// router.Get("/debug/pprof/heap", pprof.Index)
+	// router.Get("/debug/pprof/cmdline", pprof.Cmdline)
+	// router.Get("/debug/pprof/profile", pprof.Profile)
+	// router.Get("/debug/pprof/symbol", pprof.Symbol)
+	// router.Get("/debug/pprof/trace", pprof.Trace)
 	return router
 }
