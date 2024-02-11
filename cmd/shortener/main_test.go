@@ -124,7 +124,9 @@ func TestPostLink(t *testing.T) {
 				getCookie := httptest.NewRequest(http.MethodPost, "http://localhost:8080/", bytes.NewBuffer([]byte(linkGenerator(10))))
 				getCookie.Header.Set("Content-Type", tt.reqest.contentType)
 				router.ServeHTTP(getCookieRes, getCookie)
-				cookies := getCookieRes.Result().Cookies()
+				res := getCookieRes.Result()
+				defer res.Body.Close()
+				cookies := res.Cookies()
 				for _, cookie := range cookies {
 					fmt.Println("Cookie: ", cookie)
 					userOne.cookie = cookie
