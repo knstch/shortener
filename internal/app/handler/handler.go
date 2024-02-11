@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"strings"
 
-	_ "net/http/pprof"
-
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	config "github.com/knstch/shortener/cmd/config"

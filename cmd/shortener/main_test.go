@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -140,6 +141,27 @@ func TestPostLink(t *testing.T) {
 	}
 }
 
+func BenchmarkPostLink(b *testing.B) {
+	var storage handler.Storage
+	if config.ReadyConfig.DSN != "" {
+		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+		if err != nil {
+			logger.ErrorLogger("Can't open connection: ", err)
+		}
+		err = psql.InitDB(db)
+		if err != nil {
+			logger.ErrorLogger("Can't init DB: ", err)
+		}
+		storage = psql.NewPsqlStorage(db)
+	} else {
+		storage = memory.NewMemStorage()
+	}
+	for i := 0; i < b.N; i++ {
+		ctx := context.Background()
+		storage.PostLink(ctx, linkGenerator(5), config.ReadyConfig.BaseURL, 0)
+	}
+}
+
 func TestGetLink(t *testing.T) {
 	var storage handler.Storage
 	var ping handler.PingChecker
@@ -208,6 +230,26 @@ func TestGetLink(t *testing.T) {
 			assert.Equal(t, tt.want.statusCode, rr.Code)
 			userOne.shortLinks = append(userOne.shortLinks, rr.Body.String())
 		})
+	}
+}
+
+func BenchmarkFindLink(b *testing.B) {
+	var storage handler.Storage
+	if config.ReadyConfig.DSN != "" {
+		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+		if err != nil {
+			logger.ErrorLogger("Can't open connection: ", err)
+		}
+		err = psql.InitDB(db)
+		if err != nil {
+			logger.ErrorLogger("Can't init DB: ", err)
+		}
+		storage = psql.NewPsqlStorage(db)
+	} else {
+		storage = memory.NewMemStorage()
+	}
+	for i := 0; i < b.N; i++ {
+		storage.FindLink(linkGenerator(5))
 	}
 }
 
@@ -364,5 +406,40 @@ func TestPostLinkJSONBatch(t *testing.T) {
 			}
 			fmt.Println("checking links", len(userOne.shortLinks))
 		})
+	}
+}
+
+func BenchmarkGetURLsByID(b *testing.B) {
+	var storage handler.Storage
+	if config.ReadyConfig.DSN != "" {
+		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+		if err != nil {
+			logger.ErrorLogger("Can't open connection: ", err)
+		}
+		err = psql.InitDB(db)
+		if err != nil {
+			logger.ErrorLogger("Can't init DB: ", err)
+		}
+		storage = psql.NewPsqlStorage(db)
+	} else {
+		storage = memory.NewMemStorage()
+	}
+	for i := 0; i < b.N; i++ {
+		ctx := context.Background()
+		storage.GetURLsByID(ctx, 0, config.ReadyConfig.BaseURL)
+	}
+}
+
+func BenchmarkPing(b *testing.B) {
+	var connect dbconnect.DBConnection
+	if config.ReadyConfig.DSN != "" {
+		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+		if err != nil {
+			logger.ErrorLogger("Can't open connection: ", err)
+		}
+		connect = *dbconnect.NewDBConnection(db)
+	}
+	for i := 0; i < b.N; i++ {
+		connect.Ping()
 	}
 }
