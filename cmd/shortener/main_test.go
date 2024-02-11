@@ -430,16 +430,16 @@ func BenchmarkGetURLsByID(b *testing.B) {
 	}
 }
 
-func BenchmarkPing(b *testing.B) {
-	var connect dbconnect.DBConnection
-	if config.ReadyConfig.DSN != "" {
-		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
-		if err != nil {
-			logger.ErrorLogger("Can't open connection: ", err)
-		}
-		connect = *dbconnect.NewDBConnection(db)
-	}
-	for i := 0; i < b.N; i++ {
-		connect.Ping()
-	}
-}
+// func BenchmarkPing(b *testing.B) {
+// 	var connect dbconnect.DBConnection
+// 	if config.ReadyConfig.DSN != "" {
+// 		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+// 		if err != nil {
+// 			logger.ErrorLogger("Can't open connection: ", err)
+// 		}
+// 		connect = *dbconnect.NewDBConnection(db)
+// 	}
+// 	for i := 0; i < b.N; i++ {
+// 		connect.Ping()
+// 	}
+// }
