@@ -40,7 +40,7 @@ func (h *Handler) PostURL(res http.ResponseWriter, req *http.Request) {
 	}
 
 	returnedShortLink, err := h.s.PostLink(req.Context(), string(body), config.ReadyConfig.BaseURL, UserID)
-	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) || errors.As(err, &memStorageIntegrityErr) {
+	if (errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code)) || errors.As(err, &memStorageIntegrityErr) {
 		res.Header().Set("Content-Type", "text/plain")
 		res.WriteHeader(409)
 		res.Write([]byte(returnedShortLink))
@@ -75,7 +75,7 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	}
 	resp, _ := json.Marshal(resultJSON)
 	fmt.Printf("Shorten duplicate: %v\n", shortenURL)
-	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) || errors.As(err, &memStorageIntegrityErr) {
+	if (errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code)) || errors.As(err, &memStorageIntegrityErr) {
 		res.Header().Set("Content-Type", "application/json")
 		res.WriteHeader(409)
 		res.Write([]byte(resp))
@@ -108,7 +108,7 @@ func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 	for i := range originalRequest {
 
 		returnedShortLink, err := h.s.PostLink(req.Context(), originalRequest[i].OriginalURL, config.ReadyConfig.BaseURL, UserID)
-		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) || errors.As(err, &memStorageIntegrityErr) {
+		if (errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code)) || errors.As(err, &memStorageIntegrityErr) {
 			statusCode = 409
 		} else if err != nil {
 			logger.ErrorLogger("Error posing link: ", err)
