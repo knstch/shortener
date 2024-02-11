@@ -19,6 +19,7 @@ import (
 )
 
 var pgErr *pgconn.PgError
+var memStorageIntegrityErr *memStorage.IntegrityError
 
 func NewHandler(s Storage, p PingChecker) *Handler {
 	return &Handler{s: s, p: p}
@@ -39,15 +40,11 @@ func (h *Handler) PostURL(res http.ResponseWriter, req *http.Request) {
 	}
 
 	returnedShortLink, err := h.s.PostLink(req.Context(), string(body), config.ReadyConfig.BaseURL, UserID)
-	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) || errors.As(err, &memStorageIntegrityErr) {
 		res.Header().Set("Content-Type", "text/plain")
 		res.WriteHeader(409)
 		res.Write([]byte(returnedShortLink))
 		return
-	} else if err == memStorage.IntegrityError {
-		res.Header().Set("Content-Type", "text/plain")
-		res.WriteHeader(409)
-		res.Write([]byte(returnedShortLink))
 	} else if err != nil {
 		logger.ErrorLogger("Error posing link: ", err)
 		res.WriteHeader(http.StatusInternalServerError)
@@ -78,15 +75,11 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	}
 	resp, _ := json.Marshal(resultJSON)
 	fmt.Printf("Shorten duplicate: %v\n", shortenURL)
-	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+	if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) || errors.As(err, &memStorageIntegrityErr) {
 		res.Header().Set("Content-Type", "application/json")
 		res.WriteHeader(409)
 		res.Write([]byte(resp))
 		return
-	} else if err == memStorage.IntegrityError {
-		res.Header().Set("Content-Type", "text/plain")
-		res.WriteHeader(409)
-		res.Write([]byte(resp))
 	} else if err != nil {
 		logger.ErrorLogger("Error posting link: %v\n", err)
 		res.WriteHeader(http.StatusInternalServerError)
@@ -115,7 +108,7 @@ func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 	for i := range originalRequest {
 
 		returnedShortLink, err := h.s.PostLink(req.Context(), originalRequest[i].OriginalURL, config.ReadyConfig.BaseURL, UserID)
-		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) || errors.As(err, &memStorageIntegrityErr) {
 			statusCode = 409
 		} else if err != nil {
 			logger.ErrorLogger("Error posing link: ", err)
