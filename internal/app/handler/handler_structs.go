@@ -3,8 +3,10 @@ package handler
 import "context"
 
 type Storage interface {
-	FindLink(url string) (string, error)
-	PostLink(ctx context.Context, longLink string, URLaddr string) (string, error)
+	FindLink(url string) (string, bool, error)
+	PostLink(ctx context.Context, longLink string, URLaddr string, UserID int) (string, error)
+	GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error)
+	DeleteURLs(ctx context.Context, id int, shortURLs []string) error
 }
 
 type PingChecker interface {
@@ -22,7 +24,7 @@ type link struct {
 }
 
 // Структура для записи в json
-type result struct {
+type Result struct {
 	Result string `json:"result"`
 }
 
@@ -31,7 +33,7 @@ type originalLink struct {
 	CorrelationID string `json:"correlation_id"`
 }
 
-type shortLink struct {
+type ShortLink struct {
 	Result        string `json:"short_url"`
 	CorrelationID string `json:"correlation_id"`
 }
