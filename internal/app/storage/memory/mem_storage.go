@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"strconv"
 	"sync"
@@ -57,11 +58,18 @@ func (storage MemStorage) FindLink(url string) (string, bool, error) {
 	return value, false, nil
 }
 
+var IntegrityError = errors.New("Duplicate")
+
 // Запись ссылки в базу данных, json хранилище или in-memory. Если идет запись дубликата в БД,
 // возвращается уже существующая ссылка
 func (storage *MemStorage) PostLink(_ context.Context, longLink string, URLaddr string, _ int) (string, error) {
 	storage.Mu.Lock()
 	defer storage.Mu.Unlock()
+	for k, v := range storage.Data {
+		if v == longLink {
+			return k, IntegrityError
+		}
+	}
 	storage.Counter++
 	storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = longLink
 	storage.save(config.ReadyConfig.FileStorage)

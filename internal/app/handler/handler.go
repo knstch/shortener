@@ -15,6 +15,7 @@ import (
 	config "github.com/knstch/shortener/cmd/config"
 	cookies "github.com/knstch/shortener/internal/app/cookies"
 	logger "github.com/knstch/shortener/internal/app/logger"
+	memStorage "github.com/knstch/shortener/internal/app/storage/memory"
 )
 
 var pgErr *pgconn.PgError
@@ -43,6 +44,10 @@ func (h *Handler) PostURL(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(409)
 		res.Write([]byte(returnedShortLink))
 		return
+	} else if err == memStorage.IntegrityError {
+		res.Header().Set("Content-Type", "text/plain")
+		res.WriteHeader(409)
+		res.Write([]byte(returnedShortLink))
 	} else if err != nil {
 		logger.ErrorLogger("Error posing link: ", err)
 		res.WriteHeader(http.StatusInternalServerError)
@@ -78,6 +83,10 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(409)
 		res.Write([]byte(resp))
 		return
+	} else if err == memStorage.IntegrityError {
+		res.Header().Set("Content-Type", "text/plain")
+		res.WriteHeader(409)
+		res.Write([]byte(resp))
 	} else if err != nil {
 		logger.ErrorLogger("Error posting link: %v\n", err)
 		res.WriteHeader(http.StatusInternalServerError)
