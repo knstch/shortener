@@ -61,8 +61,14 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	}
 	var longLink link
 	json.Unmarshal(body, &longLink)
-	shortenURL, err := h.s.PostLink(req.Context(), longLink.URL, config.ReadyConfig.BaseURL)
-	var resultJSON = result{
+
+	UserID, err := cookies.CheckCookieForID(res, req)
+	if err != nil {
+		logger.ErrorLogger("Error getting cookie: ", err)
+	}
+
+	shortenURL, err := h.s.PostLink(req.Context(), longLink.URL, config.ReadyConfig.BaseURL, UserID)
+	var resultJSON = Result{
 		Result: shortenURL,
 	}
 	resp, _ := json.Marshal(resultJSON)
