@@ -25,6 +25,7 @@ type link struct {
 	URL string `json:"url"`
 }
 
+// Result используется для декодирования данных из JSON формата.
 type Result struct {
 	Result string `json:"result"`
 }
@@ -34,6 +35,7 @@ type originalLink struct {
 	CorrelationID string `json:"correlation_id"`
 }
 
+// ShortLink используется для декодирования данных из JSON формата.
 type ShortLink struct {
 	Result        string `json:"short_url"`
 	CorrelationID string `json:"correlation_id"`

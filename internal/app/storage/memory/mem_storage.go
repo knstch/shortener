@@ -63,10 +63,12 @@ type IntegrityError struct {
 	msg string
 }
 
+// Error возвращает текст ошибки.
 func (e *IntegrityError) Error() string {
 	return e.msg
 }
 
+// NewIntegrityError возвращает ошибку с комментарием.
 func NewIntegrityError(msg string) error {
 	return &IntegrityError{msg: msg}
 }
@@ -86,10 +88,12 @@ func (storage *MemStorage) PostLink(_ context.Context, longLink string, URLaddr 
 	return URLaddr + "/shortenLink" + strconv.Itoa(storage.Counter), nil
 }
 
+// GetURLsByID не реализован в memory storage.
 func (storage *MemStorage) GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error) {
 	return []byte("Memory storage can't operate with user IDs"), nil
 }
 
+// DeleteURLs не реализован в memory storage.
 func (storage *MemStorage) DeleteURLs(ctx context.Context, id int, shortURLs []string) error {
 	return nil
 }

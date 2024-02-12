@@ -20,6 +20,7 @@ import (
 var pgErr *pgconn.PgError
 var memStorageIntegrityErr *memStorage.IntegrityError
 
+// NewHandler возвращает интерфейс Handler.
 func NewHandler(s IStorage, p PingChecker) *Handler {
 	return &Handler{s: s, p: p}
 }

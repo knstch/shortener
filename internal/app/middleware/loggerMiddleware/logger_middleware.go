@@ -20,12 +20,14 @@ type (
 	}
 )
 
+// Write - это модифицированный метод интерфейса http.ResponseWriter.
 func (r *loggingResponse) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size
 	return size, err
 }
 
+// WriteHeader - это модифицированный метод интерфейса http.ResponseWriter.
 func (r *loggingResponse) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode

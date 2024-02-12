@@ -14,8 +14,15 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 )
 
+// PsqURLlStorage - сущность, хранящая соединение с БД.
 type PsqURLlStorage struct {
 	db *sql.DB
+}
+
+// URLs используется для кодирования данных в JSON формат.
+type URLs struct {
+	LongLink  string `json:"original_url"`
+	ShortLink string `json:"short_url"`
 }
 
 // NewPsqlStorage возвращает соединение с БД.
@@ -104,11 +111,6 @@ func (storage *PsqURLlStorage) FindLink(url string) (string, bool, error) {
 		return "", longLink.DeleteStatus, err
 	}
 	return longLink.URL, longLink.DeleteStatus, nil
-}
-
-type URLs struct {
-	LongLink  string `json:"original_url"`
-	ShortLink string `json:"short_url"`
 }
 
 // GetURLsByID получает ID клиента из куки и возвращает все ссылки отправленные им.

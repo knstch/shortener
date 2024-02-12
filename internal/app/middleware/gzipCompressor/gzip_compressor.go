@@ -23,19 +23,23 @@ func newGzipWriter(res http.ResponseWriter) *gzipWriter {
 	}
 }
 
+// Header - это модифицированный метод интерфейса http.ResponseWriter.
 func (gw *gzipWriter) Header() http.Header {
 	return gw.res.Header()
 }
 
+// Header - это модифицированный метод интерфейса http.ResponseWriter.
 func (gw *gzipWriter) Write(b []byte) (int, error) {
 	return gw.zw.Write(b)
 }
 
+// WriteHeader - это модифицированный метод интерфейса http.ResponseWriter.
 func (gw *gzipWriter) WriteHeader(statusCode int) {
 	gw.res.Header().Set("Content-Encoding", "gzip")
 	gw.res.WriteHeader(statusCode)
 }
 
+// Close - это модифицированный метод интерфейса http.ResponseWriter.
 func (gw *gzipWriter) Close() error {
 	return gw.zw.Close()
 }
@@ -57,10 +61,12 @@ func newCompressReader(req io.ReadCloser) (*gzipReader, error) {
 	}, nil
 }
 
+// Read - это модифицированный метод интерфейса http.ResponseWriter.
 func (gr *gzipReader) Read(b []byte) (n int, err error) {
 	return gr.zr.Read(b)
 }
 
+// Close - это модифицированный метод интерфейса http.ResponseWriter.
 func (gr *gzipReader) Close() error {
 	if err := gr.req.Close(); err != nil {
 		return err
