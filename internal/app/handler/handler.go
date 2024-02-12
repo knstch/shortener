@@ -88,7 +88,7 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	res.Write(resp)
 }
 
-// PostBatch выполняет ту же функцию, что и PostURL, но может 
+// PostBatch выполняет ту же функцию, что и PostURL, но может
 // принимать множество адресов.
 func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 	var originalRequest []originalLink

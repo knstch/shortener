@@ -18,7 +18,7 @@ type MemStorage struct {
 	Mu      *sync.Mutex       `json:"-"`
 }
 
-// NewMemStorage возвращает новое in-memory хранилище. 
+// NewMemStorage возвращает новое in-memory хранилище.
 func NewMemStorage() *MemStorage {
 	return &MemStorage{
 		Mu:   &sync.Mutex{},
