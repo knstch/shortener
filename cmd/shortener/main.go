@@ -21,7 +21,7 @@ import (
 
 func main() {
 	config.ParseConfig()
-	var storage handler.Storage
+	var storage handler.IStorage
 	var ping handler.PingChecker
 	if config.ReadyConfig.DSN != "" {
 		db, err := sql.Open("pgx", config.ReadyConfig.DSN)

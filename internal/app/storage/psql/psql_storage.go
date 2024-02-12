@@ -18,11 +18,11 @@ type PsqURLlStorage struct {
 	db *sql.DB
 }
 
+// NewPsqlStorage возвращает соединение с БД.
 func NewPsqlStorage(db *sql.DB) *PsqURLlStorage {
 	return &PsqURLlStorage{db: db}
 }
 
-// Ищет короткую ссылку по длинной ссылке
 func (storage *PsqURLlStorage) findShortLink(ctx context.Context, longLink string) string {
 
 	var link string
@@ -41,7 +41,6 @@ func (storage *PsqURLlStorage) findShortLink(ctx context.Context, longLink strin
 	return link
 }
 
-// Запись данных в БД
 func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string, UserID int) (string, error) {
 
 	generatedShortLink := shortLinkGenerator(5)
@@ -60,7 +59,6 @@ func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string, 
 		Deleted:   false,
 	}
 
-	// Create a new DB instance
 	db := bun.NewDB(storage.db, pgdialect.New())
 
 	_, err := db.NewInsert().
@@ -76,7 +74,7 @@ func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string, 
 	return generatedShortLink, nil
 }
 
-// Запись ссылки в БД
+// PostLink записывает длинную ссылку в хранилище и отдает короткую ссылку и ошибку.
 func (storage *PsqURLlStorage) PostLink(ctx context.Context, longLink string, URLaddr string, UserID int) (string, error) {
 	shortenLink, err := storage.insertData(ctx, longLink, UserID)
 	if err != nil {
@@ -86,7 +84,7 @@ func (storage *PsqURLlStorage) PostLink(ctx context.Context, longLink string, UR
 	return URLaddr + "/" + shortenLink, nil
 }
 
-// Поиск длинной ссылки по короткой
+// FindLink ищет ссылку по короткому адресу и отдает длинную ссылку.
 func (storage *PsqURLlStorage) FindLink(url string) (string, bool, error) {
 	var longLink struct {
 		URL          string `bun:"long_link"`
@@ -113,7 +111,7 @@ type URLs struct {
 	ShortLink string `json:"short_url"`
 }
 
-// Получаем все ссылки пользователя по его ID из кук
+// GetURLsByID получает ID клиента из куки и возвращает все ссылки отправленные им.
 func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error) {
 
 	var userIDs []URLs
@@ -160,7 +158,7 @@ func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr 
 	return jsonUserIDs, nil
 }
 
-// Удаление URL для пользователей с определенным ID
+// DeleteURLs удаляет ссылки, отправленные клиентом при том условии, что он их загрузил.
 func (storage *PsqURLlStorage) DeleteURLs(ctx context.Context, id int, shortURLs []string) error {
 
 	context := context.Background()
@@ -172,7 +170,6 @@ func (storage *PsqURLlStorage) DeleteURLs(ctx context.Context, id int, shortURLs
 	return nil
 }
 
-// Генератор канала с ссылками
 func deleteURLsGenerator(ctx context.Context, URLs []string) chan string {
 	URLsCh := make(chan string)
 	go func() {

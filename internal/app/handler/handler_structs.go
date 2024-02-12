@@ -2,28 +2,29 @@ package handler
 
 import "context"
 
-type Storage interface {
+// IStorage объединяет методы для взаимодействия с БД.
+type IStorage interface {
 	FindLink(url string) (string, bool, error)
 	PostLink(ctx context.Context, longLink string, URLaddr string, UserID int) (string, error)
 	GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error)
 	DeleteURLs(ctx context.Context, id int, shortURLs []string) error
 }
 
+// PingChecker имеет 1 метод для проверки соединения с БД.
 type PingChecker interface {
 	Ping() error
 }
 
+// Handler объединяет интерфейсы для проверки соединения и взаимодействия с БД
 type Handler struct {
-	s Storage
+	s IStorage
 	p PingChecker
 }
 
-// Структура для приема URL
 type link struct {
 	URL string `json:"url"`
 }
 
-// Структура для записи в json
 type Result struct {
 	Result string `json:"result"`
 }

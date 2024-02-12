@@ -1,3 +1,4 @@
+// cookies отвечает за взаимодействия с куками пользоватяеля.
 package cookies
 
 import (
@@ -15,6 +16,7 @@ var secretKey = config.ReadyConfig.SecretKey
 
 const tokenExp = time.Hour * 3
 
+// Claims хранит claims JWT токена.
 type Claims struct {
 	jwt.RegisteredClaims
 	UserID int
@@ -61,6 +63,7 @@ func getUserID(tokenString string) (int, error) {
 	return claims.UserID, nil
 }
 
+// CheckCookieForID проверяет наличие cookie у клиента и расшифровывает JWT.
 func CheckCookieForID(res http.ResponseWriter, req *http.Request) (int, error) {
 	var id int
 	userIDCookie, err := req.Cookie("UserID")

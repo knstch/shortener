@@ -60,3 +60,24 @@ func TestFindLink(t *testing.T) {
 		})
 	}
 }
+
+var testMemStorage = NewMemStorage()
+
+func ExampleMemStorage_PostLink() {
+	ctx := context.Background()
+
+	longLinkToSave := "https://practicum.yandex.ru/"
+
+	testMemStorage.PostLink(ctx, longLinkToSave, "http://localhost:8080/", 0)
+
+	// Output:
+	// http://localhost:8080/shortenLink1
+}
+
+func ExampleMemStorage_FindLink() {
+
+	testMemStorage.FindLink("shortenLink1")
+
+	// Output:
+	// https://practicum.yandex.ru/
+}

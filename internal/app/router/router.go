@@ -1,3 +1,4 @@
+// Модуль router отвечает за роутинг запросов и соединения с нужным хендлером.
 package router
 
 import (
@@ -10,6 +11,7 @@ import (
 	loggerMiddleware "github.com/knstch/shortener/internal/app/middleware/loggerMiddleware"
 )
 
+// RequestsRouter - это роутер.
 func RequestsRouter(h *handler.Handler) chi.Router {
 	router := chi.NewRouter()
 	router.Use(gzipCompressor.GzipMiddleware)

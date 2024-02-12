@@ -1,3 +1,4 @@
+// Модуль handler отвечает за хедлеры.
 package handler
 
 import (
@@ -19,13 +20,12 @@ import (
 var pgErr *pgconn.PgError
 var memStorageIntegrityErr *memStorage.IntegrityError
 
-func NewHandler(s Storage, p PingChecker) *Handler {
+func NewHandler(s IStorage, p PingChecker) *Handler {
 	return &Handler{s: s, p: p}
 }
 
-// Вызывается при использовании метода POST, передает данные
-// в функцию postURL для записи данных в хранилище и пишет
-// ответ сервера, когда все записано
+// PostURL используется для записи нового URL и предоставления короткой ссылки,
+// если URL уже записан, то возвращается код 409 и дается коротка ссылка.
 func (h *Handler) PostURL(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -53,7 +53,8 @@ func (h *Handler) PostURL(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte(returnedShortLink))
 }
 
-// Функция принимает ссылку в json и отдает короткую в json
+// PostLongLinkJSON выполняет ту же функцию, что и PostURL, но принимает
+// и отдает данные в JSON формате.
 func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -87,6 +88,8 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	res.Write(resp)
 }
 
+// PostBatch выполняет ту же функцию, что и PostURL, но может 
+// принимать множество адресов.
 func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 	var originalRequest []originalLink
 	var shortenResponse []ShortLink
@@ -130,8 +133,8 @@ func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 	res.Write(response)
 }
 
-// Вызываем для передачи данных в функцию getURL
-// и написания ответа в зависимости от ответа getURL
+// GetURL принимает короткий адрес в path и если был найден
+// длинный адрес, то перенаправляет клиента по этой ссылке.
 func (h *Handler) GetURL(res http.ResponseWriter, req *http.Request) {
 	url := req.URL.Path
 	url = strings.Trim(url, "/")
@@ -161,7 +164,7 @@ func (h *Handler) GetURL(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte(shortenURL))
 }
 
-// Проверяем соединение с базой данных
+// PingDB используется для проверки соединения с БД.
 func (h *Handler) PingDB(res http.ResponseWriter, req *http.Request) {
 	if h.p != nil {
 		if err := h.p.Ping(); err != nil {
@@ -175,7 +178,8 @@ func (h *Handler) PingDB(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte("Connection is set"))
 }
 
-// Выдает ссылки по ID пользователя из кук
+// GetUserLinks отдает клиенту все ссылки загруженные им проверяя
+// ID с помощью куки.
 func (h *Handler) GetUserLinks(res http.ResponseWriter, req *http.Request) {
 
 	userID, err := cookies.CheckCookieForID(res, req)
@@ -200,6 +204,8 @@ func (h *Handler) GetUserLinks(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// DeleteLinks принимает множество ссылок от пользователя и удаляет их,
+// если они были загруженным клиентом отправляющим этот запрос.
 func (h *Handler) DeleteLinks(res http.ResponseWriter, req *http.Request) {
 	userID, err := cookies.CheckCookieForID(res, req)
 	if err != nil {

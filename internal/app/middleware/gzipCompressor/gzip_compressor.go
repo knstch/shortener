@@ -1,3 +1,5 @@
+// Модуль gzipcompressor имеет middleware для сжатия данных
+// и модифицированные методы интерфейса http.ResponseWriter.
 package gzipcompressor
 
 import (
@@ -66,7 +68,8 @@ func (gr *gzipReader) Close() error {
 	return gr.zr.Close()
 }
 
-// Сжимает данные
+// GzipMiddleware сжимает данные в формате gzip, если клиент
+// может распаковать эти данные.
 func GzipMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		originalRes := res

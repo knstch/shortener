@@ -1,3 +1,5 @@
+// Пакет config отвечает за сбор конфига используя
+// глобальные переменные или флаги.
 package config
 
 import (
@@ -5,6 +7,7 @@ import (
 	"os"
 )
 
+// Config хранит важные данные для работы сервера.
 type Config struct {
 	ServerAddr  string
 	BaseURL     string
@@ -13,9 +16,10 @@ type Config struct {
 	SecretKey   string
 }
 
+// ReadyConfig хранит config.
 var ReadyConfig Config
 
-// Получаем конфиг из флагов, или глобальных переменных, или значения по-умолчанию
+// ParseConfig собирает config параметры из флагов и переменных окружения.
 func ParseConfig() {
 	flag.StringVar(&ReadyConfig.ServerAddr, "a", ":8080", "port to run server")
 	flag.StringVar(&ReadyConfig.BaseURL, "b", "http://localhost"+ReadyConfig.ServerAddr, "address to run server")

@@ -1,3 +1,4 @@
+// Пакет logger используется для логирования взаимодействия с сервером.
 package logger
 
 import (
@@ -19,20 +20,18 @@ type (
 	}
 )
 
-// Модификация интерфейса Write, добавляем сохрание размера в переменную
 func (r *loggingResponse) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size
 	return size, err
 }
 
-// Модификация интерфейса WriteHeader, добавляем сохрание статус кода в переменную
 func (r *loggingResponse) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode
 }
 
-// Middlware обработчик для запросов, записывает URI, method, duration
+// RequestsLogger - это middlware обработчик для запросов, записывает URI, method, duration.
 func RequestsLogger(h http.Handler) http.Handler {
 	var logger, err = zap.NewDevelopment()
 	var sugar = *logger.Sugar()

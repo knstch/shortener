@@ -1,3 +1,4 @@
+// Модуль storage имеет методы для завимодействия с memstorage.
 package storage
 
 import (
@@ -10,12 +11,14 @@ import (
 	config "github.com/knstch/shortener/cmd/config"
 )
 
+// MemStorage хранит ссылки в виде мапы, счетчик для сокращения ссылок и mutex.
 type MemStorage struct {
 	Data    map[string]string `json:"links"`
 	Counter int               `json:"counter"`
 	Mu      *sync.Mutex       `json:"-"`
 }
 
+// NewMemStorage возвращает новое in-memory хранилище. 
 func NewMemStorage() *MemStorage {
 	return &MemStorage{
 		Mu:   &sync.Mutex{},
@@ -23,7 +26,6 @@ func NewMemStorage() *MemStorage {
 	}
 }
 
-// Сохраняем данные в файл
 func (storage *MemStorage) save(fname string) error {
 	data, err := json.MarshalIndent(storage, "", "   ")
 	if err != nil {
@@ -35,7 +37,6 @@ func (storage *MemStorage) save(fname string) error {
 	return nil
 }
 
-// Загружаем данные из файла
 func (storage *MemStorage) load(fname string) error {
 	data, err := os.ReadFile(fname)
 	if err != nil {
@@ -47,7 +48,7 @@ func (storage *MemStorage) load(fname string) error {
 	return nil
 }
 
-// Ищем ссылку
+// FindLink ищет ссылку по короткому адресу и отдает длинную ссылку.
 func (storage MemStorage) FindLink(url string) (string, bool, error) {
 	storage.load(config.ReadyConfig.FileStorage)
 	value, ok := storage.Data[url]
@@ -57,6 +58,7 @@ func (storage MemStorage) FindLink(url string) (string, bool, error) {
 	return value, false, nil
 }
 
+// IntegrityError возвращает тип ошибки IntegrityError.
 type IntegrityError struct {
 	msg string
 }
@@ -69,8 +71,7 @@ func NewIntegrityError(msg string) error {
 	return &IntegrityError{msg: msg}
 }
 
-// Запись ссылки в базу данных, json хранилище или in-memory. Если идет запись дубликата в БД,
-// возвращается уже существующая ссылка
+// PostLink записывает длинную ссылку в хранилище и отдает короткую ссылку и ошибку.
 func (storage *MemStorage) PostLink(_ context.Context, longLink string, URLaddr string, _ int) (string, error) {
 	storage.Mu.Lock()
 	defer storage.Mu.Unlock()

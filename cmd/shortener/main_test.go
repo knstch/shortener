@@ -52,7 +52,7 @@ type request struct {
 
 func TestPostLink(t *testing.T) {
 	config.ParseConfig()
-	var storage handler.Storage
+	var storage handler.IStorage
 	var ping handler.PingChecker
 	if config.ReadyConfig.DSN != "" {
 		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
@@ -143,7 +143,7 @@ func TestPostLink(t *testing.T) {
 }
 
 func BenchmarkPostLink(b *testing.B) {
-	var storage handler.Storage
+	var storage handler.IStorage
 	if config.ReadyConfig.DSN != "" {
 		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
 		if err != nil {
@@ -164,7 +164,7 @@ func BenchmarkPostLink(b *testing.B) {
 }
 
 func TestGetLink(t *testing.T) {
-	var storage handler.Storage
+	var storage handler.IStorage
 	var ping handler.PingChecker
 	if config.ReadyConfig.DSN != "" {
 		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
@@ -235,7 +235,7 @@ func TestGetLink(t *testing.T) {
 }
 
 func BenchmarkFindLink(b *testing.B) {
-	var storage handler.Storage
+	var storage handler.IStorage
 	if config.ReadyConfig.DSN != "" {
 		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
 		if err != nil {
@@ -255,7 +255,7 @@ func BenchmarkFindLink(b *testing.B) {
 }
 
 func TestPostLinkJSON(t *testing.T) {
-	var storage handler.Storage
+	var storage handler.IStorage
 	var ping handler.PingChecker
 	if config.ReadyConfig.DSN != "" {
 		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
@@ -330,7 +330,7 @@ func TestPostLinkJSON(t *testing.T) {
 }
 
 func TestPostLinkJSONBatch(t *testing.T) {
-	var storage handler.Storage
+	var storage handler.IStorage
 	var ping handler.PingChecker
 	if config.ReadyConfig.DSN != "" {
 		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
@@ -410,7 +410,7 @@ func TestPostLinkJSONBatch(t *testing.T) {
 }
 
 func BenchmarkGetURLsByID(b *testing.B) {
-	var storage handler.Storage
+	var storage handler.IStorage
 	if config.ReadyConfig.DSN != "" {
 		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
 		if err != nil {
