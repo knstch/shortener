@@ -21,7 +21,7 @@ var pgErr *pgconn.PgError
 var memStorageIntegrityErr *memStorage.IntegrityError
 
 // NewHandler возвращает интерфейс Handler.
-func NewHandler(s IStorage, p PingChecker) *Handler {
+func NewHandler(s Storager, p PingChecker) *Handler {
 	return &Handler{s: s, p: p}
 }
 
@@ -67,6 +67,13 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	UserID, err := cookies.CheckCookieForID(res, req)
 	if err != nil {
 		logger.ErrorLogger("Error getting cookie: ", err)
+		cookieError := Result{
+			Result: "Error operating with cookie",
+		}
+		resp, _ := json.Marshal(cookieError)
+		res.Header().Set("Content-Type", "application/json")
+		res.WriteHeader(http.StatusInternalServerError)
+		res.Write([]byte(resp))
 	}
 
 	shortenURL, err := h.s.PostLink(req.Context(), longLink.URL, config.ReadyConfig.BaseURL, UserID)
@@ -95,7 +102,7 @@ func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 	var originalRequest []originalLink
 	var shortenResponse []ShortLink
 
-	statusCode := 201
+	statusCode := http.StatusCreated
 
 	err := json.NewDecoder(req.Body).Decode(&originalRequest)
 	if err != nil {
@@ -140,7 +147,7 @@ func (h *Handler) GetURL(res http.ResponseWriter, req *http.Request) {
 	url := req.URL.Path
 	url = strings.Trim(url, "/")
 
-	shortenURL, deleteStatus, err := h.s.FindLink(url)
+	shortenURL, deleteStatus, err := h.s.FindLink(req.Context(), url)
 	if err != nil {
 		logger.ErrorLogger("Can't find link: ", err)
 		http.Error(res, "Bad Request", http.StatusInternalServerError)
@@ -221,6 +228,9 @@ func (h *Handler) DeleteLinks(res http.ResponseWriter, req *http.Request) {
 	err = json.NewDecoder(req.Body).Decode(&URLs)
 	if err != nil {
 		logger.ErrorLogger("Failed to read json: ", err)
+		res.Header().Set("Content-Type", "text/plain")
+		res.WriteHeader(http.StatusInternalServerError)
+		res.Write([]byte("Failed to read JSON"))
 	}
 
 	err = h.s.DeleteURLs(req.Context(), userID, URLs)

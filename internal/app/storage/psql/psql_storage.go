@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	common "github.com/knstch/shortener/internal/app/common"
 	logger "github.com/knstch/shortener/internal/app/logger"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
@@ -50,7 +51,7 @@ func (storage *PsqURLlStorage) findShortLink(ctx context.Context, longLink strin
 
 func (storage *PsqURLlStorage) insertData(ctx context.Context, longLink string, UserID int) (string, error) {
 
-	generatedShortLink := shortLinkGenerator(5)
+	generatedShortLink := common.ShortLinkGenerator(5)
 
 	type ShortenUrls struct {
 		ShortLink string `bun:"short_link"`
@@ -92,7 +93,7 @@ func (storage *PsqURLlStorage) PostLink(ctx context.Context, longLink string, UR
 }
 
 // FindLink ищет ссылку по короткому адресу и отдает длинную ссылку.
-func (storage *PsqURLlStorage) FindLink(url string) (string, bool, error) {
+func (storage *PsqURLlStorage) FindLink(ctx context.Context, url string) (string, bool, error) {
 	var longLink struct {
 		URL          string `bun:"long_link"`
 		DeleteStatus bool   `bun:"deleted"`
@@ -104,7 +105,7 @@ func (storage *PsqURLlStorage) FindLink(url string) (string, bool, error) {
 		TableExpr("shorten_URLs").
 		Model(&longLink).
 		Where("short_link = ?", url).
-		Scan(context.Background())
+		Scan(ctx)
 
 	if err != nil {
 		logger.ErrorLogger("Can't write longLink: ", err)
@@ -162,10 +163,7 @@ func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr 
 
 // DeleteURLs удаляет ссылки, отправленные клиентом при том условии, что он их загрузил.
 func (storage *PsqURLlStorage) DeleteURLs(ctx context.Context, id int, shortURLs []string) error {
-
-	context := context.Background()
-
-	inputCh := deleteURLsGenerator(context, shortURLs)
+	inputCh := deleteURLsGenerator(ctx, shortURLs)
 
 	storage.bulkDeleteStatusUpdate(id, inputCh)
 

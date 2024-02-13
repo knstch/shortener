@@ -5,6 +5,8 @@ import (
 	"fmt"
 )
 
+var testMemStorage = NewMemStorage()
+
 func ExampleMemStorage_PostLink() {
 	ctx := context.Background()
 
@@ -18,8 +20,8 @@ func ExampleMemStorage_PostLink() {
 }
 
 func ExampleMemStorage_FindLink() {
-
-	longLink, _, _ := testMemStorage.FindLink("shortenLink1")
+	ctx := context.Background()
+	longLink, _, _ := testMemStorage.FindLink(ctx, "shortenLink1")
 	fmt.Println(longLink)
 
 	// Output:

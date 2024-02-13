@@ -13,16 +13,18 @@ import (
 
 // MemStorage хранит ссылки в виде мапы, счетчик для сокращения ссылок и mutex.
 type MemStorage struct {
-	Data    map[string]string `json:"links"`
-	Counter int               `json:"counter"`
-	Mu      *sync.Mutex       `json:"-"`
+	Data       map[string]string `json:"links"`
+	SwapedData map[string]string `json:"swaped_links"`
+	Counter    int               `json:"counter"`
+	Mu         *sync.Mutex       `json:"-"`
 }
 
 // NewMemStorage возвращает новое in-memory хранилище.
 func NewMemStorage() *MemStorage {
 	return &MemStorage{
-		Mu:   &sync.Mutex{},
-		Data: make(map[string]string),
+		Mu:         &sync.Mutex{},
+		Data:       make(map[string]string),
+		SwapedData: make(map[string]string),
 	}
 }
 
@@ -49,7 +51,7 @@ func (storage *MemStorage) load(fname string) error {
 }
 
 // FindLink ищет ссылку по короткому адресу и отдает длинную ссылку.
-func (storage MemStorage) FindLink(url string) (string, bool, error) {
+func (storage MemStorage) FindLink(ctx context.Context, url string) (string, bool, error) {
 	storage.load(config.ReadyConfig.FileStorage)
 	value, ok := storage.Data[url]
 	if !ok {
@@ -77,15 +79,15 @@ func NewIntegrityError(msg string) error {
 func (storage *MemStorage) PostLink(_ context.Context, longLink string, URLaddr string, _ int) (string, error) {
 	storage.Mu.Lock()
 	defer storage.Mu.Unlock()
-	for k, v := range storage.Data {
-		if v == longLink {
-			return URLaddr + "/" + k, NewIntegrityError("Duplicate")
-		}
+	value, ok := storage.SwapedData[longLink]
+	if !ok {
+		storage.Counter++
+		storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = longLink
+		storage.SwapedData[longLink] = "shortenLink" + strconv.Itoa(storage.Counter)
+		storage.save(config.ReadyConfig.FileStorage)
+		return URLaddr + "/shortenLink" + strconv.Itoa(storage.Counter), nil
 	}
-	storage.Counter++
-	storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = longLink
-	storage.save(config.ReadyConfig.FileStorage)
-	return URLaddr + "/shortenLink" + strconv.Itoa(storage.Counter), nil
+	return URLaddr + "/" + value, NewIntegrityError("Duplicate")
 }
 
 // GetURLsByID не реализован в memory storage.
