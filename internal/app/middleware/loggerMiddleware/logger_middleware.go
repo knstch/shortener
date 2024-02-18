@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	errorLogger "github.com/knstch/shortener/internal/app/logger"
 	"go.uber.org/zap"
 )
 
@@ -72,9 +71,6 @@ func RequestsLogger(h http.Handler) http.Handler {
 			"size", responseData.size,
 		)
 	}
-	err = logger.Sync()
-	if err != nil {
-		errorLogger.ErrorLogger("Can't sync logger: ", err)
-	}
+	defer logger.Sync()
 	return http.HandlerFunc(logFn)
 }
