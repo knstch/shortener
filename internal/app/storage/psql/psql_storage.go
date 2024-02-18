@@ -131,17 +131,19 @@ func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr 
 		Model(&bunURLS).
 		Where("user_id = ?", id).
 		Rows(ctx)
-	rows.Err()
 	if err != nil {
 		logger.ErrorLogger("Error getting data: ", err)
 		return nil, err
 	}
-
-	defer rows.Close()
+	err = rows.Err()
+	if err != nil {
+		logger.ErrorLogger("Have errors readong rows: ", err)
+		return nil, err
+	}
 
 	for rows.Next() {
 		var links URLs
-		err := rows.Scan(&links.LongLink, &links.ShortLink)
+		err = rows.Scan(&links.LongLink, &links.ShortLink)
 		if err != nil {
 			logger.ErrorLogger("Error scanning data: ", err)
 			return nil, err
@@ -157,7 +159,10 @@ func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr 
 		logger.ErrorLogger("Can't marshal IDs: ", err)
 		return nil, err
 	}
-
+	err = rows.Close()
+	if err != nil {
+		logger.ErrorLogger("Can't close rows: ", err)
+	}
 	return jsonUserIDs, nil
 }
 

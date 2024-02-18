@@ -1,6 +1,8 @@
 package common
 
-import "math/rand"
+import (
+	"math/rand"
+)
 
 // Генератор короткой ссылки
 func ShortLinkGenerator(length int) string {

@@ -71,11 +71,14 @@ func CheckCookieForID(res http.ResponseWriter, req *http.Request) (int, error) {
 		if req.URL.Path == "/api/user/urls" {
 			return 0, err
 		}
-		jwt, err := buildJWTString()
+
+		var jwt string
+		jwt, err = buildJWTString()
 		if err != nil {
 			logger.ErrorLogger("Error making cookie: ", err)
 			return 0, err
 		}
+
 		cookie := http.Cookie{
 			Name:  "UserID",
 			Value: jwt,

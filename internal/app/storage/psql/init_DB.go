@@ -29,7 +29,10 @@ func InitDB(db *sql.DB) error {
 
 	_, err = db.ExecContext(ctx, initialization)
 	if err != nil {
-		tx.Rollback()
+		err = tx.Rollback()
+		if err != nil {
+			return err
+		}
 		return err
 	}
 

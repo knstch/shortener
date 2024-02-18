@@ -42,7 +42,10 @@ func (h *Handler) PostURL(res http.ResponseWriter, req *http.Request) {
 	if (errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code)) || errors.As(err, &memStorageIntegrityErr) {
 		res.Header().Set("Content-Type", "text/plain")
 		res.WriteHeader(409)
-		res.Write([]byte(returnedShortLink))
+		_, err = res.Write([]byte(returnedShortLink))
+		if err != nil {
+			logger.ErrorLogger("Can't write response: ", err)
+		}
 		return
 	} else if err != nil {
 		logger.ErrorLogger("Error posing link: ", err)
@@ -51,7 +54,10 @@ func (h *Handler) PostURL(res http.ResponseWriter, req *http.Request) {
 	}
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(201)
-	res.Write([]byte(returnedShortLink))
+	_, err = res.Write([]byte(returnedShortLink))
+	if err != nil {
+		logger.ErrorLogger("Can't write response: ", err)
+	}
 }
 
 // PostLongLinkJSON выполняет ту же функцию, что и PostURL, но принимает
@@ -62,7 +68,10 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 		logger.ErrorLogger("Error during opening body: ", err)
 	}
 	var longLink link
-	json.Unmarshal(body, &longLink)
+	err = json.Unmarshal(body, &longLink)
+	if err != nil {
+		logger.ErrorLogger("Error unmarshallig JSON: ", err)
+	}
 
 	UserID, err := cookies.CheckCookieForID(res, req)
 	if err != nil {
@@ -73,7 +82,10 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 		resp, _ := json.Marshal(cookieError)
 		res.Header().Set("Content-Type", "application/json")
 		res.WriteHeader(http.StatusInternalServerError)
-		res.Write([]byte(resp))
+		_, err = res.Write([]byte(resp))
+		if err != nil {
+			logger.ErrorLogger("Can't write response: ", err)
+		}
 	}
 
 	shortenURL, err := h.s.PostLink(req.Context(), longLink.URL, config.ReadyConfig.BaseURL, UserID)
@@ -85,7 +97,10 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	if (errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code)) || errors.As(err, &memStorageIntegrityErr) {
 		res.Header().Set("Content-Type", "application/json")
 		res.WriteHeader(409)
-		res.Write([]byte(resp))
+		_, err = res.Write([]byte(resp))
+		if err != nil {
+			logger.ErrorLogger("Can't write response: ", err)
+		}
 		return
 	} else if err != nil {
 		logger.ErrorLogger("Error posting link: %v\n", err)
@@ -93,7 +108,10 @@ func (h *Handler) PostLongLinkJSON(res http.ResponseWriter, req *http.Request) {
 	}
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(201)
-	res.Write(resp)
+	_, err = res.Write(resp)
+	if err != nil {
+		logger.ErrorLogger("Can't write response: ", err)
+	}
 }
 
 // PostBatch выполняет ту же функцию, что и PostURL, но может
@@ -115,8 +133,8 @@ func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 	}
 
 	for i := range originalRequest {
-
-		returnedShortLink, err := h.s.PostLink(req.Context(), originalRequest[i].OriginalURL, config.ReadyConfig.BaseURL, UserID)
+		var returnedShortLink string
+		returnedShortLink, err = h.s.PostLink(req.Context(), originalRequest[i].OriginalURL, config.ReadyConfig.BaseURL, UserID)
 		if (errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code)) || errors.As(err, &memStorageIntegrityErr) {
 			statusCode = 409
 		} else if err != nil {
@@ -138,7 +156,10 @@ func (h *Handler) PostBatch(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(statusCode)
-	res.Write(response)
+	_, err = res.Write(response)
+	if err != nil {
+		logger.ErrorLogger("Can't write response: ", err)
+	}
 }
 
 // GetURL принимает короткий адрес в path и если был найден
@@ -162,14 +183,20 @@ func (h *Handler) GetURL(res http.ResponseWriter, req *http.Request) {
 	if deleteStatus {
 		res.Header().Set("Content-Type", "text/plain")
 		res.WriteHeader(410)
-		res.Write([]byte("Deleted URL"))
+		_, err = res.Write([]byte("Deleted URL"))
+		if err != nil {
+			logger.ErrorLogger("Can't write response: ", err)
+		}
 		return
 	}
 
 	res.Header().Set("Content-Type", "text/plain")
 	res.Header().Set("Location", shortenURL)
 	res.WriteHeader(307)
-	res.Write([]byte(shortenURL))
+	_, err = res.Write([]byte(shortenURL))
+	if err != nil {
+		logger.ErrorLogger("Can't write response: ", err)
+	}
 }
 
 // PingDB используется для проверки соединения с БД.
@@ -183,7 +210,10 @@ func (h *Handler) PingDB(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusOK)
-	res.Write([]byte("Connection is set"))
+	_, err := res.Write([]byte("Connection is set"))
+	if err != nil {
+		logger.ErrorLogger("Can't write response: ", err)
+	}
 }
 
 // GetUserLinks отдает клиенту все ссылки загруженные им проверяя
@@ -194,7 +224,10 @@ func (h *Handler) GetUserLinks(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		logger.ErrorLogger("Unauthorized access : ", err)
 		res.WriteHeader(401)
-		res.Write([]byte("Unauthorized"))
+		_, err = res.Write([]byte("Unauthorized"))
+		if err != nil {
+			logger.ErrorLogger("Can't write response: ", err)
+		}
 		return
 	}
 	userURLs, err := h.s.GetURLsByID(req.Context(), userID, config.ReadyConfig.BaseURL)
@@ -205,10 +238,16 @@ func (h *Handler) GetUserLinks(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 	if string(userURLs) == "null" {
 		res.WriteHeader(200)
-		res.Write([]byte("No content"))
+		_, err = res.Write([]byte("No content"))
+		if err != nil {
+			logger.ErrorLogger("Can't write response: ", err)
+		}
 	} else {
 		res.WriteHeader(200)
-		res.Write(userURLs)
+		_, err = res.Write(userURLs)
+		if err != nil {
+			logger.ErrorLogger("Can't write response: ", err)
+		}
 	}
 }
 
@@ -219,7 +258,10 @@ func (h *Handler) DeleteLinks(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		logger.ErrorLogger("Error getting cookie: ", err)
 		res.WriteHeader(401)
-		res.Write([]byte("You have no links to delete"))
+		_, err = res.Write([]byte("You have no links to delete"))
+		if err != nil {
+			logger.ErrorLogger("Can't write response: ", err)
+		}
 		return
 	}
 
@@ -230,7 +272,10 @@ func (h *Handler) DeleteLinks(res http.ResponseWriter, req *http.Request) {
 		logger.ErrorLogger("Failed to read json: ", err)
 		res.Header().Set("Content-Type", "text/plain")
 		res.WriteHeader(http.StatusInternalServerError)
-		res.Write([]byte("Failed to read JSON"))
+		_, err = res.Write([]byte("Failed to read JSON"))
+		if err != nil {
+			logger.ErrorLogger("Can't write response: ", err)
+		}
 	}
 
 	err = h.s.DeleteURLs(req.Context(), userID, URLs)
@@ -239,5 +284,8 @@ func (h *Handler) DeleteLinks(res http.ResponseWriter, req *http.Request) {
 	}
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(202)
-	res.Write([]byte("Deleted"))
+	_, err = res.Write([]byte("Deleted"))
+	if err != nil {
+		logger.ErrorLogger("Can't write response: ", err)
+	}
 }

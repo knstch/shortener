@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	config "github.com/knstch/shortener/cmd/config"
+	"github.com/knstch/shortener/internal/app/logger"
 )
 
 // MemStorage хранит ссылки в виде мапы, счетчик для сокращения ссылок и mutex.
@@ -52,7 +53,10 @@ func (storage *MemStorage) load(fname string) error {
 
 // FindLink ищет ссылку по короткому адресу и отдает длинную ссылку.
 func (storage MemStorage) FindLink(ctx context.Context, url string) (string, bool, error) {
-	storage.load(config.ReadyConfig.FileStorage)
+	err := storage.load(config.ReadyConfig.FileStorage)
+	if err != nil {
+		logger.ErrorLogger("Error loading file: ", err)
+	}
 	value, ok := storage.Data[url]
 	if !ok {
 		return "", false, nil
@@ -84,7 +88,10 @@ func (storage *MemStorage) PostLink(_ context.Context, longLink string, URLaddr 
 		storage.Counter++
 		storage.Data["shortenLink"+strconv.Itoa(storage.Counter)] = longLink
 		storage.SwapedData[longLink] = "shortenLink" + strconv.Itoa(storage.Counter)
-		storage.save(config.ReadyConfig.FileStorage)
+		err := storage.save(config.ReadyConfig.FileStorage)
+		if err != nil {
+			logger.ErrorLogger("Can't save data to file: ", err)
+		}
 		return URLaddr + "/shortenLink" + strconv.Itoa(storage.Counter), nil
 	}
 	return URLaddr + "/" + value, NewIntegrityError("Duplicate")

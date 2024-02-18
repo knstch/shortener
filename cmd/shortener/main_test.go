@@ -125,13 +125,20 @@ func TestPostLink(t *testing.T) {
 				getCookie.Header.Set("Content-Type", tt.reqest.contentType)
 				router.ServeHTTP(getCookieRes, getCookie)
 				res := getCookieRes.Result()
-				defer res.Body.Close()
 				cookies := res.Cookies()
 				for _, cookie := range cookies {
 					fmt.Println("Cookie: ", cookie)
 					userOne.cookie = cookie
 				}
-				getCookieRes.Result().Body.Close()
+				err := getCookieRes.Result().Body.Close()
+				if err != nil {
+					logger.ErrorLogger("Can't close cookie result body: ", err)
+				}
+				err = res.Body.Close()
+				if err != nil {
+					logger.ErrorLogger("Can't close body", err)
+				}
+
 			}
 			rr := httptest.NewRecorder()
 			router.ServeHTTP(rr, req)
@@ -159,7 +166,10 @@ func BenchmarkPostLink(b *testing.B) {
 	}
 	for i := 0; i < b.N; i++ {
 		ctx := context.Background()
-		storage.PostLink(ctx, linkGenerator(5), config.ReadyConfig.BaseURL, 0)
+		_, err := storage.PostLink(ctx, linkGenerator(5), config.ReadyConfig.BaseURL, 0)
+		if err != nil {
+			logger.ErrorLogger("Can't post link: ", err)
+		}
 	}
 }
 
@@ -251,7 +261,10 @@ func BenchmarkFindLink(b *testing.B) {
 		storage = memory.NewMemStorage()
 	}
 	for i := 0; i < b.N; i++ {
-		storage.FindLink(ctx, linkGenerator(5))
+		_, _, err := storage.FindLink(ctx, linkGenerator(5))
+		if err != nil {
+			logger.ErrorLogger("Have error finding link: ", err)
+		}
 	}
 }
 
@@ -324,7 +337,10 @@ func TestPostLinkJSON(t *testing.T) {
 				logger.ErrorLogger("Error during opening body: ", err)
 			}
 
-			json.Unmarshal(body, &shortLink)
+			err = json.Unmarshal(body, &shortLink)
+			if err != nil {
+				logger.ErrorLogger("have error unmarshaling shortLink: ", err)
+			}
 			userOne.shortLinks = append(userOne.shortLinks, rr.Body.String())
 		})
 	}
@@ -401,7 +417,10 @@ func TestPostLinkJSONBatch(t *testing.T) {
 				logger.ErrorLogger("Error during opening body: ", err)
 			}
 
-			json.Unmarshal(body, &shortLinkBatch)
+			err = json.Unmarshal(body, &shortLinkBatch)
+			if err != nil {
+				logger.ErrorLogger("Error unmarshaling shortLinkBatch: ", err)
+			}
 			for _, link := range shortLinkBatch {
 				userOne.shortLinks = append(userOne.shortLinks, link.Result)
 			}
@@ -427,7 +446,10 @@ func BenchmarkGetURLsByID(b *testing.B) {
 	}
 	for i := 0; i < b.N; i++ {
 		ctx := context.Background()
-		storage.GetURLsByID(ctx, 0, config.ReadyConfig.BaseURL)
+		_, err := storage.GetURLsByID(ctx, 0, config.ReadyConfig.BaseURL)
+		if err != nil {
+			logger.ErrorLogger("Error getting URLs by ID: ", err)
+		}
 	}
 }
 
