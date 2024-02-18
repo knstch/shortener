@@ -1,3 +1,5 @@
+// Модуль gzipcompressor имеет middleware для сжатия данных
+// и модифицированные методы интерфейса http.ResponseWriter.
 package gzipcompressor
 
 import (
@@ -21,19 +23,23 @@ func newGzipWriter(res http.ResponseWriter) *gzipWriter {
 	}
 }
 
+// Header - это модифицированный метод интерфейса http.ResponseWriter.
 func (gw *gzipWriter) Header() http.Header {
 	return gw.res.Header()
 }
 
+// Header - это модифицированный метод интерфейса http.ResponseWriter.
 func (gw *gzipWriter) Write(b []byte) (int, error) {
 	return gw.zw.Write(b)
 }
 
+// WriteHeader - это модифицированный метод интерфейса http.ResponseWriter.
 func (gw *gzipWriter) WriteHeader(statusCode int) {
 	gw.res.Header().Set("Content-Encoding", "gzip")
 	gw.res.WriteHeader(statusCode)
 }
 
+// Close - это модифицированный метод интерфейса http.ResponseWriter.
 func (gw *gzipWriter) Close() error {
 	return gw.zw.Close()
 }
@@ -55,10 +61,12 @@ func newCompressReader(req io.ReadCloser) (*gzipReader, error) {
 	}, nil
 }
 
+// Read - это модифицированный метод интерфейса http.ResponseWriter.
 func (gr *gzipReader) Read(b []byte) (n int, err error) {
 	return gr.zr.Read(b)
 }
 
+// Close - это модифицированный метод интерфейса http.ResponseWriter.
 func (gr *gzipReader) Close() error {
 	if err := gr.req.Close(); err != nil {
 		return err
@@ -66,7 +74,8 @@ func (gr *gzipReader) Close() error {
 	return gr.zr.Close()
 }
 
-// Сжимает данные
+// GzipMiddleware сжимает данные в формате gzip, если клиент
+// может распаковать эти данные.
 func GzipMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		originalRes := res
@@ -75,7 +84,10 @@ func GzipMiddleware(h http.Handler) http.Handler {
 		if supportsGzip {
 			compressedRes := newGzipWriter(res)
 			originalRes = compressedRes
-			defer compressedRes.Close()
+			err := compressedRes.Close()
+			if err != nil {
+				errorLogger.ErrorLogger("Can't close compressed response body: ", err)
+			}
 		}
 		if contentEncodingGzip {
 			decompressedReq, err := newCompressReader(req.Body)
@@ -85,7 +97,10 @@ func GzipMiddleware(h http.Handler) http.Handler {
 				return
 			}
 			req.Body = decompressedReq
-			defer decompressedReq.Close()
+			err = decompressedReq.Close()
+			if err != nil {
+				errorLogger.ErrorLogger("Can't close decompressed response body: ", err)
+			}
 		}
 		h.ServeHTTP(originalRes, req)
 	})
