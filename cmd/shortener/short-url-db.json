@@ -1,9 +1,9 @@
 {
    "links": {
-      "shortenLink1": "RYf0OADN8R_long_link"
+      "shortenLink1": "https://www.vk.com/asdasdsdasdasd"
    },
    "swaped_links": {
-      "RYf0OADN8R_long_link": "shortenLink1"
+      "https://www.vk.com/asdasdsdasdasd": "shortenLink1"
    },
    "counter": 1
 }

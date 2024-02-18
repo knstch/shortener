@@ -1,3 +1,7 @@
+// Пакет multichecker включает в себя следующие анализаторы:
+// exitanalyzer (проверка наличия os.Exit() в функции и файле main),
+// errcheck (проверка обработки ошибок),
+// analysis (стандартный пакет линтеров).
 package multichecker
 
 import (

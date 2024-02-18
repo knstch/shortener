@@ -84,10 +84,7 @@ func GzipMiddleware(h http.Handler) http.Handler {
 		if supportsGzip {
 			compressedRes := newGzipWriter(res)
 			originalRes = compressedRes
-			err := compressedRes.Close()
-			if err != nil {
-				errorLogger.ErrorLogger("Can't close compressed response body: ", err)
-			}
+			defer compressedRes.Close()
 		}
 		if contentEncodingGzip {
 			decompressedReq, err := newCompressReader(req.Body)
@@ -97,10 +94,7 @@ func GzipMiddleware(h http.Handler) http.Handler {
 				return
 			}
 			req.Body = decompressedReq
-			err = decompressedReq.Close()
-			if err != nil {
-				errorLogger.ErrorLogger("Can't close decompressed response body: ", err)
-			}
+			defer decompressedReq.Close()
 		}
 		h.ServeHTTP(originalRes, req)
 	})

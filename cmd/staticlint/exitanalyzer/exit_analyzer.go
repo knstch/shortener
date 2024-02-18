@@ -6,6 +6,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// OSExitAnalyzer проверяет наличие os.Exit() в файле и функции main.
 var OSExitAnalyzer = &analysis.Analyzer{
 	Name: "exitAnalyzer",
 	Doc:  "Checks if there any os.Exit implementations in code",
