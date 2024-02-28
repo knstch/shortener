@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +18,12 @@ import (
 	"github.com/knstch/shortener/internal/app/logger"
 	gzipCompressor "github.com/knstch/shortener/internal/app/middleware/gzipCompressor"
 	loggerMiddleware "github.com/knstch/shortener/internal/app/middleware/loggerMiddleware"
+)
+
+var (
+	buildVersion string = "N/A"
+	buildDate    string = "N/A"
+	buildCommit  string = "N/A"
 )
 
 // Роутер запросов
@@ -50,6 +57,7 @@ func main() {
 	} else {
 		storage = memory.NewMemStorage()
 	}
+	fmt.Printf("version=%s, time=%s, commit=%s\n", buildVersion, buildDate, buildCommit)
 	h := handler.NewHandler(storage, ping)
 
 	srv := http.Server{
