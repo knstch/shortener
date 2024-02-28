@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +18,12 @@ import (
 
 	"github.com/knstch/shortener/cmd/config"
 	"github.com/knstch/shortener/internal/app/logger"
+)
+
+var (
+	buildVersion string = "N/A"
+	buildDate    string = "N/A"
+	buildCommit  string = "N/A"
 )
 
 func main() {
@@ -38,6 +45,7 @@ func main() {
 		storage = memory.NewMemStorage()
 	}
 	h := handler.NewHandler(storage, ping)
+	fmt.Printf("version=%s, time=%s, commit=%s\n", buildVersion, buildDate, buildCommit)
 
 	srv := http.Server{
 		Addr:    config.ReadyConfig.ServerAddr,
