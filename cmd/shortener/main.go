@@ -10,6 +10,7 @@ import (
 
 	_ "net/http/pprof"
 
+	certconstructor "github.com/knstch/shortener/internal/app/certConstructor"
 	"github.com/knstch/shortener/internal/app/handler"
 	router "github.com/knstch/shortener/internal/app/router"
 	dbconnect "github.com/knstch/shortener/internal/app/storage/DBConnect"
@@ -45,12 +46,22 @@ func main() {
 		storage = memory.NewMemStorage()
 	}
 	h := handler.NewHandler(storage, ping)
+
 	fmt.Printf("version=%s, time=%s, commit=%s\n", buildVersion, buildDate, buildCommit)
 
 	srv := http.Server{
 		Addr:    config.ReadyConfig.ServerAddr,
 		Handler: router.RequestsRouter(h),
 	}
+
+	if config.ReadyConfig.EnableHTTPS {
+		srv = http.Server{
+			Addr:      config.ReadyConfig.ServerAddr,
+			Handler:   router.RequestsRouter(h),
+			TLSConfig: certconstructor.NewCert("shortener.ru").TLSConfig(),
+		}
+	}
+
 	idleConnsClosed := make(chan struct{})
 	go func() {
 		sigint := make(chan os.Signal, 1)
@@ -62,8 +73,16 @@ func main() {
 		}
 		close(idleConnsClosed)
 	}()
-	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		logger.ErrorLogger("Run error", err)
+
+	switch {
+	case config.ReadyConfig.EnableHTTPS:
+		if err := srv.ListenAndServeTLS(config.ReadyConfig.CertFilePath, config.ReadyConfig.KeyFilePath); err != http.ErrServerClosed {
+			logger.ErrorLogger("Run error", err)
+		}
+	case !config.ReadyConfig.EnableHTTPS:
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			logger.ErrorLogger("Run error", err)
+		}
 	}
 	<-idleConnsClosed
 }
