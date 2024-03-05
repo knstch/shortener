@@ -1,9 +1,11 @@
-package psql
+package common
 
-import "math/rand"
+import (
+	"math/rand"
+)
 
 // Генератор короткой ссылки
-func shortLinkGenerator(length int) string {
+func ShortLinkGenerator(length int) string {
 	chars := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	result := make([]byte, length)
 	for i := 0; i < length; i++ {
