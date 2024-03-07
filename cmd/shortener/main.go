@@ -3,38 +3,34 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 
-	"github.com/go-chi/chi/v5"
+	_ "net/http/pprof"
+
+	certconstructor "github.com/knstch/shortener/internal/app/certConstructor"
 	"github.com/knstch/shortener/internal/app/handler"
+	router "github.com/knstch/shortener/internal/app/router"
 	dbconnect "github.com/knstch/shortener/internal/app/storage/DBConnect"
 	memory "github.com/knstch/shortener/internal/app/storage/memory"
 	"github.com/knstch/shortener/internal/app/storage/psql"
 
 	"github.com/knstch/shortener/cmd/config"
 	"github.com/knstch/shortener/internal/app/logger"
-	gzipCompressor "github.com/knstch/shortener/internal/app/middleware/gzipCompressor"
-	loggerMiddleware "github.com/knstch/shortener/internal/app/middleware/loggerMiddleware"
 )
 
-// Роутер запросов
-func RequestsRouter(h *handler.Handler) chi.Router {
-	router := chi.NewRouter()
-	router.Use(gzipCompressor.GzipMiddleware)
-	router.Use(loggerMiddleware.RequestsLogger)
-	router.Get("/{url}", h.GetURL)
-	router.Post("/", h.PostURL)
-	router.Post("/api/shorten", h.PostLongLinkJSON)
-	router.Get("/ping", h.PingDB)
-	router.Post("/api/shorten/batch", h.PostBatch)
-	return router
-}
+var (
+	buildVersion string = "N/A"
+	buildDate    string = "N/A"
+	buildCommit  string = "N/A"
+)
 
 func main() {
 	config.ParseConfig()
-	var storage handler.Storage
+	var storage handler.Storager
 	var ping handler.PingChecker
 	if config.ReadyConfig.DSN != "" {
 		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
@@ -52,15 +48,25 @@ func main() {
 	}
 	h := handler.NewHandler(storage, ping)
 
+	fmt.Printf("version=%s, time=%s, commit=%s\n", buildVersion, buildDate, buildCommit)
+
 	srv := http.Server{
 		Addr:    config.ReadyConfig.ServerAddr,
-		Handler: RequestsRouter(h),
+		Handler: router.RequestsRouter(h),
+	}
+
+	if config.ReadyConfig.EnableHTTPS {
+		srv = http.Server{
+			Addr:      config.ReadyConfig.ServerAddr,
+			Handler:   router.RequestsRouter(h),
+			TLSConfig: certconstructor.NewCert("shortener.ru").TLSConfig(),
+		}
 	}
 
 	idleConnsClosed := make(chan struct{})
 	go func() {
 		sigint := make(chan os.Signal, 1)
-		signal.Notify(sigint, os.Interrupt)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 		<-sigint
 
 		if err := srv.Shutdown(context.Background()); err != nil {
@@ -68,8 +74,16 @@ func main() {
 		}
 		close(idleConnsClosed)
 	}()
-	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		logger.ErrorLogger("Run error", err)
+
+	switch {
+	case config.ReadyConfig.EnableHTTPS:
+		if err := srv.ListenAndServeTLS(config.ReadyConfig.CertFilePath, config.ReadyConfig.KeyFilePath); err != http.ErrServerClosed {
+			logger.ErrorLogger("Run error", err)
+		}
+	case !config.ReadyConfig.EnableHTTPS:
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			logger.ErrorLogger("Run error", err)
+		}
 	}
 	<-idleConnsClosed
 }
