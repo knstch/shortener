@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 
 	_ "net/http/pprof"
 
@@ -65,7 +66,7 @@ func main() {
 	idleConnsClosed := make(chan struct{})
 	go func() {
 		sigint := make(chan os.Signal, 1)
-		signal.Notify(sigint, os.Interrupt)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 		<-sigint
 
 		if err := srv.Shutdown(context.Background()); err != nil {
