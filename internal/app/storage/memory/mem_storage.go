@@ -53,6 +53,8 @@ func (storage *MemStorage) load(fname string) error {
 
 // FindLink ищет ссылку по короткому адресу и отдает длинную ссылку.
 func (storage MemStorage) FindLink(ctx context.Context, url string) (string, bool, error) {
+	storage.Mu.Lock()
+	defer storage.Mu.Unlock()
 	err := storage.load(config.ReadyConfig.FileStorage)
 	if err != nil {
 		logger.ErrorLogger("Error loading file: ", err)
