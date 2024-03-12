@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	config "github.com/knstch/shortener/cmd/config"
+	"github.com/knstch/shortener/internal/app/common"
 	"github.com/knstch/shortener/internal/app/logger"
 )
 
@@ -107,4 +108,15 @@ func (storage *MemStorage) GetURLsByID(ctx context.Context, id int, URLaddr stri
 // DeleteURLs не реализован в memory storage.
 func (storage *MemStorage) DeleteURLs(ctx context.Context, id int, shortURLs []string) error {
 	return nil
+}
+
+func (storage *MemStorage) GetStats(ctx context.Context) ([]byte, error) {
+	readyStats, err := json.Marshal(common.Stats{
+		URLs:  len(storage.Data),
+		Users: 0,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return readyStats, nil
 }

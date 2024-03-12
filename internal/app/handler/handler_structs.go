@@ -1,6 +1,8 @@
 package handler
 
-import "context"
+import (
+	"context"
+)
 
 // IStorage объединяет методы для взаимодействия с БД.
 type Storager interface {
@@ -8,6 +10,7 @@ type Storager interface {
 	PostLink(ctx context.Context, longLink string, URLaddr string, UserID int) (string, error)
 	GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error)
 	DeleteURLs(ctx context.Context, id int, shortURLs []string) error
+	GetStats(ctx context.Context) ([]byte, error)
 }
 
 // PingChecker имеет 1 метод для проверки соединения с БД.

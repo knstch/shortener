@@ -17,14 +17,15 @@ import (
 
 // Config хранит важные данные для работы сервера.
 type Config struct {
-	ServerAddr   string `json:"server_address"`
-	BaseURL      string `json:"base_url"`
-	FileStorage  string `json:"file_storage_path"`
-	DSN          string `json:"database_dsn"`
-	SecretKey    string
-	EnableHTTPS  bool `json:"enable_https"`
-	CertFilePath string
-	KeyFilePath  string
+	ServerAddr    string `json:"server_address"`
+	BaseURL       string `json:"base_url"`
+	FileStorage   string `json:"file_storage_path"`
+	DSN           string `json:"database_dsn"`
+	SecretKey     string
+	EnableHTTPS   bool `json:"enable_https"`
+	CertFilePath  string
+	KeyFilePath   string
+	TrustedSubnet string `json:"trusted_subnet"`
 }
 
 // ReadyConfig хранит config.
@@ -39,8 +40,9 @@ func ParseConfig() {
 	flag.StringVar(&ReadyConfig.ServerAddr, "a", ":8080", "port to run server")
 	flag.StringVar(&ReadyConfig.BaseURL, "b", "http://localhost"+ReadyConfig.ServerAddr, "address to run server")
 	flag.StringVar(&ReadyConfig.FileStorage, "f", "short-url-db.json", "file to save links")
-	// DSN postgres://postgres:Xer_0101@localhost:5432/shorten_urls?sslmode=disable
+	// DSN postgres://admin:password@localhost:7070/?sslmode=disable
 	flag.StringVar(&ReadyConfig.DSN, "d", "", "DSN to access DB")
+	flag.StringVar(&ReadyConfig.TrustedSubnet, "t", "", "trusted subnet address")
 	flag.BoolVar(&ReadyConfig.EnableHTTPS, "s", false, "enabling HTTPS connection")
 	flag.Parse()
 	if secretKey := os.Getenv("SECRET_KEY"); secretKey != "" {
@@ -60,6 +62,9 @@ func ParseConfig() {
 	}
 	if enableHTTPS := os.Getenv("ENABLE_HTTPS"); enableHTTPS != "" || ReadyConfig.EnableHTTPS {
 		ReadyConfig.EnableHTTPS = true
+	}
+	if trustedSubnet := os.Getenv("TRUSTED_SUBNET"); trustedSubnet != "" {
+		ReadyConfig.TrustedSubnet = trustedSubnet
 	}
 	ReadyConfig.CertFilePath = os.Getenv("CERT_FILE")
 	ReadyConfig.KeyFilePath = os.Getenv("PRIVATE_KEY")

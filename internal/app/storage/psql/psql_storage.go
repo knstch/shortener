@@ -221,3 +221,28 @@ func (storage *PsqURLlStorage) bulkDeleteStatusUpdate(id int, inputChs ...chan s
 	}
 	wg.Wait()
 }
+
+func (storage *PsqURLlStorage) GetStats(ctx context.Context) ([]byte, error) {
+	urlsStatRaw := storage.db.QueryRowContext(ctx, "SELECT COUNT (*) as urlsCount from shorten_URLs")
+	userStatRaw := storage.db.QueryRowContext(ctx, "SELECT COUNT (DISTINCT user_id) as uniqueUsers from shorten_URLs")
+
+	var urlsStat, usersStat int
+
+	if err := urlsStatRaw.Scan(&urlsStat); err != nil {
+		return nil, err
+	}
+
+	if err := userStatRaw.Scan(&usersStat); err != nil {
+		return nil, err
+	}
+
+	readyStats, err := json.Marshal(common.Stats{
+		URLs:  urlsStat,
+		Users: usersStat,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return readyStats, nil
+}

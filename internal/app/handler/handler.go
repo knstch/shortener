@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 
@@ -288,4 +289,71 @@ func (h *Handler) DeleteLinks(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		logger.ErrorLogger("Can't write response: ", err)
 	}
+}
+
+func (h *Handler) GetStatsHandler(res http.ResponseWriter, req *http.Request) {
+	clientIP, err := subnetChecker(req)
+	if err != nil {
+		logger.ErrorLogger("Failed to read clients IP: ", err)
+		res.Header().Set("Content-Type", "text/plain")
+		res.WriteHeader(http.StatusInternalServerError)
+		_, err = res.Write([]byte("Failed to read clients IP"))
+		if err != nil {
+			logger.ErrorLogger("Can't write response: ", err)
+		}
+	}
+	if clientIP != config.ReadyConfig.TrustedSubnet {
+		res.Header().Set("Content-Type", "text/plain")
+		res.WriteHeader(http.StatusForbidden)
+		_, err = res.Write([]byte("Доступ запрещен"))
+		if err != nil {
+			logger.ErrorLogger("Can't write response: ", err)
+		}
+		return
+	}
+	stats, err := h.s.GetStats(req.Context())
+	if err != nil {
+		logger.ErrorLogger("Failed to load stats: ", err)
+		res.Header().Set("Content-Type", "text/plain")
+		res.WriteHeader(http.StatusInternalServerError)
+		_, err = res.Write([]byte("Failed to load stats"))
+		if err != nil {
+			logger.ErrorLogger("Can't write response: ", err)
+		}
+	}
+	res.Header().Set("Content-Type", "tapplication/json")
+	res.WriteHeader(200)
+	_, err = res.Write(stats)
+	if err != nil {
+		logger.ErrorLogger("Can't write response: ", err)
+	}
+}
+
+func subnetChecker(req *http.Request) (string, error) {
+	ipStr := req.Header.Get("X-Real-IP")
+	// парсим ip
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		// если заголовок X-Real-IP пуст, пробуем X-Forwarded-For
+		// этот заголовок содержит адреса отправителя и промежуточных прокси
+		// в виде 203.0.113.195, 70.41.3.18, 150.172.238.178
+		ips := req.Header.Get("X-Forwarded-For")
+		// разделяем цепочку адресов
+		ipStrs := strings.Split(ips, ",")
+		// интересует только первый
+		ipStr = ipStrs[0]
+		// парсим
+		ip = net.ParseIP(ipStr)
+		if ip == nil {
+			ipStr, _, err := net.SplitHostPort(req.RemoteAddr)
+			if err != nil {
+				return "", err
+			}
+			ip = net.ParseIP(ipStr)
+		}
+	}
+	if ip == nil {
+		return "", fmt.Errorf("невозможно определить ip")
+	}
+	return ip.String(), nil
 }

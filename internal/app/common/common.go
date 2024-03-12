@@ -4,6 +4,11 @@ import (
 	"math/rand"
 )
 
+type Stats struct {
+	URLs  int `json:"urls"`
+	Users int `json:"users"`
+}
+
 // Генератор короткой ссылки
 func ShortLinkGenerator(length int) string {
 	chars := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

@@ -23,6 +23,7 @@ func RequestsRouter(h *handler.Handler) chi.Router {
 	router.Post("/api/shorten/batch", h.PostBatch)
 	router.Get("/api/user/urls", h.GetUserLinks)
 	router.Delete("/api/user/urls", h.DeleteLinks)
+	router.Get("/api/internal/stats", h.GetStatsHandler)
 	// router.Get("/debug/pprof/", pprof.Index)
 	// router.Get("/debug/pprof/heap", pprof.Index)
 	// router.Get("/debug/pprof/cmdline", pprof.Cmdline)
