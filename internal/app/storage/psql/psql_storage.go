@@ -222,6 +222,7 @@ func (storage *PsqURLlStorage) bulkDeleteStatusUpdate(id int, inputChs ...chan s
 	wg.Wait()
 }
 
+// GetStats обращается к БД и собирает общее кол-во ссылок и уникальных пользователей.
 func (storage *PsqURLlStorage) GetStats(ctx context.Context) ([]byte, error) {
 	urlsStatRaw := storage.db.QueryRowContext(ctx, "SELECT COUNT (*) as urlsCount from shorten_URLs")
 	userStatRaw := storage.db.QueryRowContext(ctx, "SELECT COUNT (DISTINCT user_id) as uniqueUsers from shorten_URLs")

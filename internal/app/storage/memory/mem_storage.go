@@ -110,6 +110,7 @@ func (storage *MemStorage) DeleteURLs(ctx context.Context, id int, shortURLs []s
 	return nil
 }
 
+// GetStats не реализован в memory storage.
 func (storage *MemStorage) GetStats(ctx context.Context) ([]byte, error) {
 	readyStats, err := json.Marshal(common.Stats{
 		URLs:  len(storage.Data),

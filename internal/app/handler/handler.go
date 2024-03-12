@@ -291,6 +291,8 @@ func (h *Handler) DeleteLinks(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// GetStatsHandler выдает статистику по пользователям и ссылкам.
+// Информация доступна только доверенным пользователям.
 func (h *Handler) GetStatsHandler(res http.ResponseWriter, req *http.Request) {
 	clientIP, err := subnetChecker(req)
 	if err != nil {
