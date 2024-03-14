@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/knstch/proto";
+
+message ShortenLink {
+    string shortenLink = 1;
+}
+
+message LongLink {
+    string longLink = 1;
+}
+
+message UserLinks {
+    string LongLink = 1;
+    string ShortLink = 2;
+  }
+
+message ListShortenLinks {
+    repeated UserLinks shortenLink = 1;
+}
+
+message ListShortenLinksToDelete {
+    repeated string shortenLink = 1;
+}
+
+message FindShortenLinkResponse {
+    string longLink = 1;
+    bool deleteStatus = 2;
+}
+
+message ShortenLinkResponse {
+    string longLink = 1;
+    bool deleteStatus = 2;
+}
+
+message LongLinkResponse {
+    string shortenLink = 1;
+}
+
+message Empty {
+}
+
+service Links {
+    rpc FindLink(ShortenLink) returns (ShortenLinkResponse);
+    rpc PostLink(LongLink) returns (LongLinkResponse);
+    rpc GetURLsByID(Empty) returns (ListShortenLinks);
+    rpc DeleteURLs(ListShortenLinksToDelete) returns(Empty);
+}
