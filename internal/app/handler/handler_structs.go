@@ -2,13 +2,15 @@ package handler
 
 import (
 	"context"
+
+	"github.com/knstch/shortener/internal/app/common"
 )
 
 // IStorage объединяет методы для взаимодействия с БД.
 type Storager interface {
 	FindLink(ctx context.Context, url string) (string, bool, error)
 	PostLink(ctx context.Context, longLink string, URLaddr string, UserID int) (string, error)
-	GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error)
+	GetURLsByID(ctx context.Context, id int, URLaddr string) ([]common.URLs, error)
 	DeleteURLs(ctx context.Context, id int, shortURLs []string) error
 	GetStats(ctx context.Context) ([]byte, error)
 }

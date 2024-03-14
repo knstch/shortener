@@ -4,5 +4,6 @@
     "file_storage_path": "/path/to/file.db", 
     "database_dsn": "", 
     "enable_https": false,
-    "trusted_subnet": "127.0.0.1"
+    "trusted_subnet": "127.0.0.1",
+    "enable_grpc": true
 }

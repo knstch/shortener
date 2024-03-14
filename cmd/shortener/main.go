@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,12 +12,15 @@ import (
 
 	_ "net/http/pprof"
 
+	mygrpc "github.com/knstch/shortener/grpc"
 	certconstructor "github.com/knstch/shortener/internal/app/certConstructor"
 	"github.com/knstch/shortener/internal/app/handler"
 	router "github.com/knstch/shortener/internal/app/router"
 	dbconnect "github.com/knstch/shortener/internal/app/storage/DBConnect"
 	memory "github.com/knstch/shortener/internal/app/storage/memory"
 	"github.com/knstch/shortener/internal/app/storage/psql"
+	pb "github.com/knstch/shortener/proto"
+	"google.golang.org/grpc"
 
 	"github.com/knstch/shortener/cmd/config"
 	"github.com/knstch/shortener/internal/app/logger"
@@ -75,15 +79,36 @@ func main() {
 		close(idleConnsClosed)
 	}()
 
-	switch {
-	case config.ReadyConfig.EnableHTTPS:
-		if err := srv.ListenAndServeTLS(config.ReadyConfig.CertFilePath, config.ReadyConfig.KeyFilePath); err != http.ErrServerClosed {
-			logger.ErrorLogger("Run error", err)
+	go func() {
+		switch {
+		case config.ReadyConfig.EnableHTTPS:
+			if err := srv.ListenAndServeTLS(config.ReadyConfig.CertFilePath, config.ReadyConfig.KeyFilePath); err != http.ErrServerClosed {
+				logger.ErrorLogger("Run error", err)
+			}
+		case !config.ReadyConfig.EnableHTTPS:
+			if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+				logger.ErrorLogger("Run error", err)
+			}
 		}
-	case !config.ReadyConfig.EnableHTTPS:
-		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-			logger.ErrorLogger("Run error", err)
+	}()
+
+	go func() {
+		listen, err := net.Listen("tcp", config.ReadyConfig.RPCport)
+		if err != nil {
+			logger.ErrorLogger("error listening tcp: ", err)
 		}
-	}
+		s := grpc.NewServer()
+
+		db, err := sql.Open("pgx", config.ReadyConfig.DSN)
+		if err != nil {
+			logger.ErrorLogger("Can't open connection: ", err)
+		}
+
+		pb.RegisterLinksServer(s, &mygrpc.LinksServer{Db: psql.NewPsqlStorage(db)})
+
+		if err := s.Serve(listen); err != nil {
+			logger.ErrorLogger("grpc server failed", err)
+		}
+	}()
 	<-idleConnsClosed
 }

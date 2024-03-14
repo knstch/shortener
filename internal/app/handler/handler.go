@@ -236,8 +236,10 @@ func (h *Handler) GetUserLinks(res http.ResponseWriter, req *http.Request) {
 		logger.ErrorLogger("Error getting URLs by ID", err)
 	}
 
+	jsonUserLinks, _ := json.Marshal(userURLs)
+
 	res.Header().Set("Content-Type", "application/json")
-	if string(userURLs) == "null" {
+	if string(jsonUserLinks) == "null" {
 		res.WriteHeader(200)
 		_, err = res.Write([]byte("No content"))
 		if err != nil {
@@ -245,7 +247,7 @@ func (h *Handler) GetUserLinks(res http.ResponseWriter, req *http.Request) {
 		}
 	} else {
 		res.WriteHeader(200)
-		_, err = res.Write(userURLs)
+		_, err = res.Write(jsonUserLinks)
 		if err != nil {
 			logger.ErrorLogger("Can't write response: ", err)
 		}
@@ -333,18 +335,11 @@ func (h *Handler) GetStatsHandler(res http.ResponseWriter, req *http.Request) {
 
 func subnetChecker(req *http.Request) (string, error) {
 	ipStr := req.Header.Get("X-Real-IP")
-	// парсим ip
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
-		// если заголовок X-Real-IP пуст, пробуем X-Forwarded-For
-		// этот заголовок содержит адреса отправителя и промежуточных прокси
-		// в виде 203.0.113.195, 70.41.3.18, 150.172.238.178
 		ips := req.Header.Get("X-Forwarded-For")
-		// разделяем цепочку адресов
 		ipStrs := strings.Split(ips, ",")
-		// интересует только первый
 		ipStr = ipStrs[0]
-		// парсим
 		ip = net.ParseIP(ipStr)
 		if ip == nil {
 			ipStr, _, err := net.SplitHostPort(req.RemoteAddr)

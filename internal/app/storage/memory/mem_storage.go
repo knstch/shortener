@@ -101,8 +101,9 @@ func (storage *MemStorage) PostLink(_ context.Context, longLink string, URLaddr 
 }
 
 // GetURLsByID не реализован в memory storage.
-func (storage *MemStorage) GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error) {
-	return []byte("Memory storage can't operate with user IDs"), nil
+func (storage *MemStorage) GetURLsByID(ctx context.Context, id int, URLaddr string) ([]common.URLs, error) {
+	var notImplemented []common.URLs
+	return notImplemented, nil
 }
 
 // DeleteURLs не реализован в memory storage.

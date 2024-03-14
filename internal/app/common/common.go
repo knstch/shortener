@@ -10,6 +10,12 @@ type Stats struct {
 	Users int `json:"users"`
 }
 
+// URLs используется для кодирования данных в JSON формат.
+type URLs struct {
+	LongLink  string `json:"original_url"`
+	ShortLink string `json:"short_url"`
+}
+
 // Генератор короткой ссылки
 func ShortLinkGenerator(length int) string {
 	chars := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

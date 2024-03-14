@@ -20,12 +20,6 @@ type PsqURLlStorage struct {
 	db *sql.DB
 }
 
-// URLs используется для кодирования данных в JSON формат.
-type URLs struct {
-	LongLink  string `json:"original_url"`
-	ShortLink string `json:"short_url"`
-}
-
 // NewPsqlStorage возвращает соединение с БД.
 func NewPsqlStorage(db *sql.DB) *PsqURLlStorage {
 	return &PsqURLlStorage{db: db}
@@ -115,9 +109,9 @@ func (storage *PsqURLlStorage) FindLink(ctx context.Context, url string) (string
 }
 
 // GetURLsByID получает ID клиента из куки и возвращает все ссылки отправленные им.
-func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr string) ([]byte, error) {
+func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr string) ([]common.URLs, error) {
 
-	var userIDs []URLs
+	var userIDs []common.URLs
 
 	var bunURLS struct {
 		LongLink  string `bun:"long_link"`
@@ -142,28 +136,23 @@ func (storage *PsqURLlStorage) GetURLsByID(ctx context.Context, id int, URLaddr 
 	}
 
 	for rows.Next() {
-		var links URLs
+		var links common.URLs
 		err = rows.Scan(&links.LongLink, &links.ShortLink)
 		if err != nil {
 			logger.ErrorLogger("Error scanning data: ", err)
 			return nil, err
 		}
-		userIDs = append(userIDs, URLs{
+		userIDs = append(userIDs, common.URLs{
 			LongLink:  links.LongLink,
 			ShortLink: URLaddr + "/" + links.ShortLink,
 		})
 	}
 
-	jsonUserIDs, err := json.Marshal(userIDs)
-	if err != nil {
-		logger.ErrorLogger("Can't marshal IDs: ", err)
-		return nil, err
-	}
 	err = rows.Close()
 	if err != nil {
 		logger.ErrorLogger("Can't close rows: ", err)
 	}
-	return jsonUserIDs, nil
+	return userIDs, nil
 }
 
 // DeleteURLs удаляет ссылки, отправленные клиентом при том условии, что он их загрузил.

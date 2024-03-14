@@ -26,6 +26,8 @@ type Config struct {
 	CertFilePath  string
 	KeyFilePath   string
 	TrustedSubnet string `json:"trusted_subnet"`
+	EnableGrpc    bool   `json:"enable_grpc"`
+	RPCport       string `json:"rpc_port"`
 }
 
 // ReadyConfig хранит config.
@@ -44,6 +46,8 @@ func ParseConfig() {
 	flag.StringVar(&ReadyConfig.DSN, "d", "", "DSN to access DB")
 	flag.StringVar(&ReadyConfig.TrustedSubnet, "t", "", "trusted subnet address")
 	flag.BoolVar(&ReadyConfig.EnableHTTPS, "s", false, "enabling HTTPS connection")
+	flag.BoolVar(&ReadyConfig.EnableGrpc, "g", false, "enabling gRPC connection")
+	flag.StringVar(&ReadyConfig.RPCport, "r", ":3200", "port to run server")
 	flag.Parse()
 	if secretKey := os.Getenv("SECRET_KEY"); secretKey != "" {
 		ReadyConfig.SecretKey = secretKey
