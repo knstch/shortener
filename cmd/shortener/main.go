@@ -104,7 +104,7 @@ func main() {
 			logger.ErrorLogger("Can't open connection: ", err)
 		}
 
-		pb.RegisterLinksServer(s, &mygrpc.LinksServer{Db: psql.NewPsqlStorage(db)})
+		pb.RegisterLinksServer(s, &mygrpc.LinksServer{DB: psql.NewPsqlStorage(db)})
 
 		if err := s.Serve(listen); err != nil {
 			logger.ErrorLogger("grpc server failed", err)

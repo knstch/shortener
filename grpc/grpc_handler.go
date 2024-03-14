@@ -19,7 +19,7 @@ import (
 type LinksServer struct {
 	pb.UnimplementedLinksServer
 
-	Db *psql.PsqURLlStorage
+	DB *psql.PsqURLlStorage
 }
 
 var pgErr *pgconn.PgError
@@ -27,7 +27,7 @@ var pgErr *pgconn.PgError
 // FindLink ищет ссылку по короткому адресу и отдает длинную ссылку.
 func (s *LinksServer) FindLink(ctx context.Context, in *pb.ShortenLink) (*pb.ShortenLinkResponse, error) {
 	var response pb.ShortenLinkResponse
-	longLink, deleteStatus, err := s.Db.FindLink(ctx, in.ShortenLink)
+	longLink, deleteStatus, err := s.DB.FindLink(ctx, in.ShortenLink)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Error finding link")
 	}
@@ -49,7 +49,7 @@ func (s *LinksServer) PostLink(ctx context.Context, in *pb.LongLink) (*pb.LongLi
 		return nil, err
 	}
 
-	returnedShortLink, err := s.Db.PostLink(ctx, in.LongLink, config.ReadyConfig.BaseURL, userID)
+	returnedShortLink, err := s.DB.PostLink(ctx, in.LongLink, config.ReadyConfig.BaseURL, userID)
 	response.ShortenLink = returnedShortLink
 	if err != nil {
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
@@ -70,7 +70,7 @@ func (s *LinksServer) GetURLsByID(ctx context.Context, in *pb.Empty) (*pb.ListSh
 
 	var response pb.ListShortenLinks
 
-	userURLs, err := s.Db.GetURLsByID(ctx, userID, config.ReadyConfig.BaseURL)
+	userURLs, err := s.DB.GetURLsByID(ctx, userID, config.ReadyConfig.BaseURL)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "error getting links")
 	}
@@ -94,7 +94,7 @@ func (s *LinksServer) DeleteURLs(ctx context.Context, in *pb.ListShortenLinksToD
 
 	var result pb.Empty
 
-	err = s.Db.DeleteURLs(ctx, userID, in.ShortenLink)
+	err = s.DB.DeleteURLs(ctx, userID, in.ShortenLink)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "error deleting URLs")
 	}
